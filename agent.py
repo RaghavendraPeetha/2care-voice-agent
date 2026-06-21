@@ -8,6 +8,8 @@ from pathlib import Path
 
 
 from tools.appointment_tools import (
+    get_current_date,
+    get_doctors_by_speciality,
     get_doctors,
     get_doctor,
     get_available_slots,
@@ -47,6 +49,8 @@ agent = create_deep_agent(
     ],
 
     tools=[
+        get_current_date,
+        get_doctors_by_speciality,
         get_doctors,
         get_doctor,
         get_available_slots,

@@ -8,6 +8,28 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy import func
 
+@tool
+def get_current_date():
+    """
+    Returns today's date and tomorrow's date.
+
+    Always use this tool when the patient says:
+    - today
+    - tomorrow
+    - next week
+    - next Monday
+
+    Never guess dates.
+    """
+
+    today = date.today()
+
+    tomorrow = today + timedelta(days=1)
+
+    return {
+        "today": today.strftime("%Y-%m-%d"),
+        "tomorrow": tomorrow.strftime("%Y-%m-%d")
+    }
 
 @tool
 def get_doctors():
@@ -42,6 +64,57 @@ def get_doctors():
                 "services": d.services,
                 "location": d.location,
                 "hospital": d.hospital
+            }
+            for d in doctors
+        ]
+
+    finally:
+        db.close()
+
+@tool
+def get_doctors_by_speciality(speciality: str):
+    """
+    Retrieve doctors belonging to a medical speciality.
+
+    Examples:
+    - cardiologist
+    - dermatologist
+    - neurologist
+    - gastroenterologist
+
+    Always use this tool when the patient asks:
+    - I need a cardiologist
+    - Show dermatologists
+    - Which neurologists are available
+
+    Never search manually through all doctors.
+    """
+
+    db = SessionLocal()
+
+    try:
+
+        speciality = speciality.strip().lower()
+
+        doctors = (
+            db.query(Doctor)
+            .filter(
+                Doctor.speciality.ilike(
+                    f"%{speciality}%"
+                )
+            )
+            .all()
+        )
+
+        if not doctors:
+            return []
+
+        return [
+            {
+                "name": d.name,
+                "speciality": d.speciality,
+                "experience": d.experience,
+                "timings": d.opd_timings
             }
             for d in doctors
         ]
@@ -86,23 +159,23 @@ def get_doctor(doctor_name: str):
             .strip()
         )
 
-        doctor = db.query(Doctor).filter(
+        doctors = db.query(Doctor).filter(
             Doctor.name.ilike(f"%{search_name}%")
-        ).first()
+        ).all()
 
-        if not doctor:
-            return None
+        if not doctors:
+            return []
 
-        return {
-            "name": doctor.name,
-            "speciality": doctor.speciality,
-            "experience": doctor.experience,
-            "languages": doctor.languages,
-            "timings": doctor.opd_timings,
-            "expertise": doctor.expertise,
-            "services": doctor.services
-        }
-
+        return [
+            {
+                "name": d.name,
+                "speciality": d.speciality,
+                "experience": d.experience,
+                "timings": d.opd_timings
+            }
+            for d in doctors
+        ]
+    
     finally:
         db.close()
 

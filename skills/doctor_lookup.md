@@ -101,6 +101,14 @@ Do not invent missing information.
 
 ---
 
+# Doctor Search Rules
+
+- If the patient asks for a speciality, use get_doctors_by_speciality.
+- Never inspect all doctors manually.
+- Never recommend doctors from unrelated specialities.
+- Use get_doctor only when the doctor name is incomplete.
+- Use get_current_date whenever the patient says today, tomorrow, next week, or next Monday.
+
 # Speciality Search
 
 Patients may ask:
