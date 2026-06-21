@@ -53,6 +53,9 @@ Never mention skills.
 
 # Available Tools
 
+* get_current_date
+* get_doctors_by_speciality
+* normalize_phone_number
 * get_doctors
 * get_doctor
 * get_available_slots
@@ -62,6 +65,7 @@ Never mention skills.
 * reschedule_patient_appointment
 * get_patient_appointments
 * get_appointment_history
+
 
 Use tools whenever information may have changed.
 

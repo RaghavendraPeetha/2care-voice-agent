@@ -8,6 +8,77 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy import func
 
+
+@tool
+def normalize_phone_number(phone: str):
+    """
+    Convert spoken phone numbers into digits.
+
+    Examples:
+
+    one two three four
+    -> 1234
+
+    double four
+    -> 44
+
+    triple six
+    -> 666
+
+    This tool should always be used when a patient
+    provides a phone number by voice.
+    """
+
+    phone = phone.lower()
+
+    words = {
+        "zero": "0",
+        "oh": "0",
+        "one": "1",
+        "two": "2",
+        "three": "3",
+        "four": "4",
+        "five": "5",
+        "six": "6",
+        "seven": "7",
+        "eight": "8",
+        "nine": "9"
+    }
+
+    tokens = (
+        phone.replace(",", " ")
+        .replace("-", " ")
+        .split()
+    )
+
+    result = []
+
+    i = 0
+
+    while i < len(tokens):
+
+        if tokens[i] == "double" and i + 1 < len(tokens):
+            digit = words.get(tokens[i + 1], "")
+            result.extend([digit, digit])
+            i += 2
+            continue
+
+        if tokens[i] == "triple" and i + 1 < len(tokens):
+            digit = words.get(tokens[i + 1], "")
+            result.extend([digit, digit, digit])
+            i += 2
+            continue
+
+        if tokens[i] in words:
+            result.append(words[tokens[i]])
+
+        elif tokens[i].isdigit():
+            result.append(tokens[i])
+
+        i += 1
+
+    return "".join(result)
+
 @tool
 def get_current_date():
     """
@@ -229,7 +300,9 @@ def get_patient_appointments(
     try:
 
         patient_name = patient_name.strip().title()
-        patient_phone = patient_phone.strip()
+        patient_phone = normalize_phone_number.invoke(
+    {"phone": patient_phone}
+    )
 
         if not patient_name:
             return {
@@ -315,7 +388,10 @@ def get_appointment_history(
                 Appointment.patient_name.ilike(
                     patient_name.strip().title()
                 ),
-                Appointment.patient_phone == patient_phone.strip()
+                Appointment.patient_phone ==
+                normalize_phone_number.invoke(
+                    {"phone": patient_phone}
+                )
             )
             .order_by(
                 Appointment.appointment_date,
@@ -562,6 +638,16 @@ slot: str
     ]
 
     normalized_name = patient_name.strip().title()
+    patient_phone = normalize_phone_number.invoke(
+    {"phone": patient_phone}
+    )
+
+    print("BOOK REQUEST")
+    print(normalized_name)
+    print(patient_phone)
+    print(doctor_name)
+    print(appointment_date)
+    print(slot)
 
     if normalized_name.lower() in invalid_values:
         return {
@@ -742,6 +828,10 @@ slot: str
 
     db = SessionLocal()
 
+    patient_phone = normalize_phone_number.invoke(
+    {"phone": patient_phone}
+    )
+
     try:
 
         appointment = (
@@ -821,6 +911,10 @@ new_slot: str
 
     This tool only reschedules one appointment.
     """
+
+    patient_phone = normalize_phone_number.invoke(
+        {"phone": patient_phone}
+    )
 
     db = SessionLocal()
 
