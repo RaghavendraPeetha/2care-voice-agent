@@ -2,6 +2,14 @@ from fastapi import FastAPI
 
 from app.chat_api import router as chat_router
 
+from app.database import engine
+from app.models import Base
+from scripts.load_doctors import load_doctors
+
+Base.metadata.create_all(bind=engine)
+
+load_doctors()
+
 app = FastAPI(
     title="2Care Voice AI",
     description="DeepAgents Hospital Receptionist",
@@ -10,12 +18,28 @@ app = FastAPI(
 
 app.include_router(chat_router)
 
-
 @app.get("/")
 def home():
     return {
         "message": "2Care Voice AI Running"
     }
+
+@app.get("/debug-count")
+def debug_count():
+
+    from app.database import SessionLocal
+    from app.models import Doctor, Appointment
+
+    db = SessionLocal()
+
+    result = {
+        "doctors": db.query(Doctor).count(),
+        "appointments": db.query(Appointment).count()
+    }
+
+    db.close()
+
+    return result
 
 
 @app.get("/debug-appointments")
