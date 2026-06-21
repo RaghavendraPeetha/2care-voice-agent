@@ -5,17 +5,25 @@ from agent import agent
 
 router = APIRouter()
 
+# Store conversations by session
+conversation_store = {}
+
 
 class ChatRequest(BaseModel):
     message: str
-    history: list = []
+    session_id: str
 
 
 @router.post("/chat")
 def chat(data: ChatRequest):
 
-    messages = data.history.copy()
+    # Create new conversation if session doesn't exist
+    if data.session_id not in conversation_store:
+        conversation_store[data.session_id] = []
 
+    messages = conversation_store[data.session_id]
+
+    # Add user message
     messages.append(
         {
             "role": "user",
@@ -40,6 +48,14 @@ def chat(data: ChatRequest):
 
     else:
         assistant_message = str(response)
+
+    # Save assistant response
+    messages.append(
+        {
+            "role": "assistant",
+            "content": assistant_message
+        }
+    )
 
     return {
         "response": assistant_message
