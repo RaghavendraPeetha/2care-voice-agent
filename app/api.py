@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from datetime import datetime, timedelta
 
 from tools.appointment_tools import (
     get_doctors,
@@ -69,6 +70,16 @@ class RescheduleRequest(BaseModel):
     new_date: str
     new_slot: str
 
+
+
+@app.get("/today")
+def today():
+    return {
+        "today": datetime.now().strftime("%Y-%m-%d"),
+        "tomorrow": (
+            datetime.now() + timedelta(days=1)
+        ).strftime("%Y-%m-%d")
+    }
 
 # -------------------------
 # Doctor APIs
