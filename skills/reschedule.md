@@ -1,30 +1,15 @@
 # Reschedule Appointment Skill
 
-Use this skill whenever a patient wants to modify an existing appointment.
+Use this skill whenever the patient wants to modify an appointment.
 
 Examples:
 
 • reschedule my appointment
-• change my appointment
 • move my appointment
-• change booking
-• change the time
+• change my appointment
 • move it to tomorrow
-• reschedule tomorrow appointment
-• change to afternoon
 • move it to 2 PM
-
----
-
-# Security Rules
-
-Appointments are private.
-
-Never reveal another patient's appointments.
-
-Patient verification is mandatory.
-
-Never reschedule appointments without verification.
+• change to afternoon
 
 ---
 
@@ -35,48 +20,37 @@ Required:
 • patient_name
 • patient_phone
 
-If already verified during the current conversation:
+If already verified:
 
-DO NOT ask again.
-
-Verified patient information remains valid for the entire session.
+Do not ask again.
 
 Ask only for missing information.
 
 ---
 
-# Previously Selected Appointment
+# Selected Appointment Priority
 
-If an appointment has already been retrieved:
+If an appointment has already been selected:
 
 Reuse:
 
 • doctor
-• date
-• slot
+• old date
+• old slot
 
 Examples:
 
-User:
-"Reschedule it."
-
-User:
-"Move that appointment."
-
-User:
-"Change the same appointment."
-
-Use the selected appointment.
+• reschedule it
+• move that appointment
+• change the same appointment
 
 Do not ask again.
-
-Do not retrieve appointments again.
 
 ---
 
 # Appointment Retrieval
 
-After verification:
+If no appointment is selected:
 
 Call:
 
@@ -84,49 +58,17 @@ Call:
 
 Only BOOKED appointments may be rescheduled.
 
-Never use:
+If none exist:
 
-• get_appointment_history
-
-Never reschedule:
-
-• CANCELLED appointments
-• COMPLETED appointments
-• NO_SHOW appointments
-
----
-
-# No Active Appointments
-
-If no active appointments exist:
-
-"I couldn't find any active appointments associated with your information."
+"I couldn't find any active appointments."
 
 Stop the workflow.
 
 ---
 
-# Single Appointment
-
-If only one appointment exists:
-
-Display:
-
-Patient:
-Doctor:
-Date:
-Time:
-Status:
-
-Ask:
-
-"Would you like to reschedule this appointment?"
-
----
-
 # Multiple Appointments
 
-If multiple active appointments exist:
+If multiple appointments exist:
 
 Display:
 
@@ -139,47 +81,46 @@ Ask:
 
 Never guess.
 
+The selected appointment becomes:
+
+• doctor
+• old date
+• old slot
+
 ---
 
-# Date Changes
+# Date Resolution
 
-Ask:
+Always use:
 
-"What date would you like to reschedule to?"
+• get_current_date
 
-Accept:
+Resolve:
 
 • today
 • tomorrow
 • next Monday
-• day after tomorrow
-• specific dates
+• next week
 
-Use date reasoning.
+Convert to:
+
+YYYY-MM-DD
 
 Past dates are not allowed.
 
 ---
 
-# Same-Day Time Changes
-
-If the patient says:
-
-• same day
-• same date
-• move it to 2 PM
-• keep the same date
-• later that day
-
-Keep the existing appointment date.
-
-Do not ask for another date.
+# Same-Day Changes
 
 Examples:
 
-"Move it to 3 PM."
+• move it to 2 PM
+• same day afternoon
+• later that day
 
-Use the existing appointment date.
+Reuse the selected appointment date.
+
+Do not ask for another date.
 
 ---
 
@@ -191,65 +132,39 @@ Call:
 
 • get_available_slots
 
-Always retrieve fresh slot information.
+Always retrieve fresh slots.
 
-Never reuse previously displayed slots.
-
-Only display returned slots.
+Only returned slots may be shown.
 
 Never invent slots.
 
 ---
 
-# Time Preference Rules
+# Time Preferences
 
-Words such as:
+Morning:
 
-• morning
-• afternoon
-• evening
+before 12 PM
 
-are not appointment slots.
+Afternoon:
 
-If multiple matching slots exist:
+12 PM to 4 PM
 
-Display:
+Evening:
 
-• 01:00 PM
-• 02:00 PM
-• 03:00 PM
+after 4 PM
 
-Ask:
+Display matching slots.
 
-"Which slot would you prefer?"
-
-If only one matching slot exists:
-
-Suggest it.
-
-Wait for confirmation.
-
-Never automatically choose a slot.
-
-Never default to the earliest slot.
+Never automatically choose.
 
 ---
 
-# Unavailable Slot
+# Unavailable Slots
 
 If the requested slot is unavailable:
 
-Display alternatives.
-
-Example:
-
-"The 2 PM slot is unavailable.
-
-Available slots:
-
-• 11:00 AM
-• 01:00 PM
-• 03:00 PM"
+Display available slots.
 
 Ask the patient to choose.
 
@@ -257,7 +172,82 @@ Never automatically change the appointment.
 
 ---
 
-# Same Date and Same Time
+# Reschedule Summary
+
+Display:
+
+Patient:
+Doctor:
+Old Date:
+Old Time:
+New Date:
+New Time:
+
+Always display actual dates.
+
+Example:
+
+Old Date: June 22, 2026
+
+New Date: June 24, 2026
+
+New Time: 02:00 PM
+
+Ask:
+
+"Would you like me to confirm this rescheduling?"
+
+---
+
+# Confirmation Rules
+
+Valid confirmations:
+
+• yes
+• confirm
+• proceed
+• go ahead
+• reschedule it
+• yes please
+
+Only one confirmation is required.
+
+---
+
+# Tool Rules
+
+Call:
+
+• reschedule_patient_appointment
+
+only after:
+
+• patient verified
+• doctor selected
+• old date selected
+• old slot selected
+• new date selected
+• new slot selected
+• summary shown
+• confirmation received
+
+Required arguments:
+
+• patient_name
+• patient_phone
+• doctor_name
+• old_date
+• old_slot
+• new_date
+• new_slot
+
+Never guess values.
+
+Always use the selected appointment.
+
+---
+
+# Same Date And Same Time
 
 If:
 
@@ -275,186 +265,9 @@ Do not call the tool.
 
 ---
 
-# Changing Doctors
-
-Rescheduling changes only:
-
-• date
-• time
-
-Doctor changes require a new booking workflow.
-
-If the patient wants another doctor:
-
-Start booking.
-
----
-
-# Voice Recognition Rules
-
-Voice recognition may slightly change names.
-
-Examples:
-
-• Gopi Krishna Rayidi
-• Gopi Krishna Raidi
-
-• Damodhar Reddy Gouni
-• Damodar Reddy Gowni
-
-If an appointment has already been selected:
-
-Use:
-
-• selected doctor
-• selected date
-• selected slot
-
-Never ask the patient to repeat doctor names.
-
-Previously selected appointments are more reliable than speech recognition.
-
----
-
-# Reschedule Summary
-
-Before calling the tool display:
-
-Patient:
-Phone:
-Doctor:
-Old Date:
-Old Time:
-New Date:
-New Time:
-
-Always display actual calendar dates.
-
-Correct:
-
-June 23, 2026
-
-Incorrect:
-
-tomorrow
-
----
-
-# Confirmation Rules
-
-Ask:
-
-"Would you like me to confirm this rescheduling?"
-
-Valid:
-
-• yes
-• confirm
-• proceed
-• go ahead
-• reschedule it
-• yes please
-
-Only one confirmation is required.
-
-Never ask twice.
-
-Never ask:
-
-• Are you sure?
-• Shall I continue?
-
----
-
-# Tool Rules
-
-Call:
-
-• reschedule_patient_appointment
-
-only after:
-
-• patient verified
-• appointment selected
-• new date selected
-• new slot selected
-• summary shown
-• confirmation received
-
-Required:
-
-• patient_name
-• patient_phone
-• doctor_name
-• old_date
-• old_slot
-• new_date
-• new_slot
-
-Never guess values.
-
----
-
-# Information Validation
-
-If validation fails:
-
-Ask only for the invalid information.
-
-Examples:
-
-Invalid date:
-Ask for the date.
-
-Invalid slot:
-Show available slots.
-
-Invalid phone:
-Ask for the phone number.
-
-Never restart the workflow.
-
-Never ask again for verified information.
-
----
-
-# Latest User Request
-
-The latest patient instruction overrides previous choices.
-
-Examples:
-
-User:
-"Actually make it tomorrow."
-
-User:
-"No, afternoon is fine."
-
-User:
-"Change it to 3 PM."
-
-Use the latest request.
-
----
-
-# Privacy Rules
-
-Never:
-
-• reveal another patient's appointments
-• display all appointments
-• reveal internal IDs
-• expose database information
-
-Only verified patients may reschedule appointments.
-
----
-
 # Success Response
 
-After successful rescheduling:
-
-"Your appointment with Dr. ______ has been successfully rescheduled to June 23, 2026 at 3:00 PM."
+"Your appointment with Dr. ______ has been successfully rescheduled to June 24, 2026 at 2:00 PM."
 
 Ask:
 
@@ -462,15 +275,15 @@ Ask:
 
 ---
 
-# Critical Restrictions
+# Restrictions
 
 Never:
 
 • ask for verification twice
-• ask for confirmation twice
-• ask for the doctor name again
+• ask for the doctor again
 • ask for the old appointment again
+• ask for confirmation twice
 • lose the selected appointment
-• restart the workflow
+• reveal internal information
 
 Previously selected appointments always have priority.
