@@ -294,15 +294,14 @@ def get_patient_appointments(
     Cancelled, completed, and no-show appointments
     are excluded.
     """
-
     db = SessionLocal()
 
     try:
-
         patient_name = patient_name.strip().title()
+
         patient_phone = normalize_phone_number.invoke(
-    {"phone": patient_phone}
-    )
+            {"phone": patient_phone}
+        )
 
         if not patient_name:
             return {
@@ -316,22 +315,11 @@ def get_patient_appointments(
                 "message": "phone number required"
             }
 
-        if not patient_phone.isdigit():
-            return {
-                "status": "failed",
-                "message": "invalid phone number"
-            }
-
-        if len(patient_phone) != 10:
-            return {
-                "status": "failed",
-                "message": "phone number must contain 10 digits"
-            }
-
         appointments = (
             db.query(Appointment)
             .filter(
-                Appointment.patient_name.ilike(patient_name),
+                func.lower(Appointment.patient_name)
+                == patient_name.lower(),
                 Appointment.patient_phone == patient_phone,
                 Appointment.status == "BOOKED"
             )
@@ -382,16 +370,18 @@ def get_appointment_history(
 
     try:
 
+        patient_name = patient_name.strip().title()
+
+        patient_phone = normalize_phone_number.invoke(
+            {"phone": patient_phone}
+        )
+
         appointments = (
             db.query(Appointment)
             .filter(
-                Appointment.patient_name.ilike(
-                    patient_name.strip().title()
-                ),
-                Appointment.patient_phone ==
-                normalize_phone_number.invoke(
-                    {"phone": patient_phone}
-                )
+                func.lower(Appointment.patient_name)
+                == patient_name.lower(),
+                Appointment.patient_phone == patient_phone
             )
             .order_by(
                 Appointment.appointment_date,
@@ -620,6 +610,11 @@ slot: str
     DO NOT call this tool.
     """
 
+    patient_phone = normalize_phone_number.invoke(
+    {"phone": patient_phone}
+    )
+    slot = slot.strip().upper()
+
     required_fields = {
         "patient_name": patient_name,
         "patient_phone": patient_phone,
@@ -638,9 +633,6 @@ slot: str
     ]
 
     normalized_name = patient_name.strip().title()
-    patient_phone = normalize_phone_number.invoke(
-    {"phone": patient_phone}
-    )
 
     print("BOOK REQUEST")
     print(normalized_name)
@@ -825,23 +817,33 @@ slot: str
 
     Never cancel multiple appointments with one call.
     """
-
     db = SessionLocal()
 
     patient_phone = normalize_phone_number.invoke(
-    {"phone": patient_phone}
+        {"phone": patient_phone}
     )
+
+    normalized_name = patient_name.strip().title()
+
+    print("CANCEL REQUEST")
+    print(normalized_name)
+    print(patient_phone)
+    print(doctor_name)
+    print(appointment_date)
+    print(slot)
 
     try:
 
         appointment = (
             db.query(Appointment)
             .filter(
-                Appointment.patient_name.ilike(patient_name),
+                func.lower(Appointment.patient_name)
+                == normalized_name.lower(),
                 Appointment.patient_phone == patient_phone,
-                Appointment.doctor_name == doctor_name,
-                Appointment.appointment_date == appointment_date,
-                Appointment.slot == slot
+                Appointment.status == "BOOKED"
+            )
+            .order_by(
+                Appointment.appointment_date
             )
             .first()
         )
@@ -850,24 +852,6 @@ slot: str
             return {
                 "status": "failed",
                 "message": "appointment not found"
-            }
-
-        if appointment.status == "CANCELLED":
-            return {
-                "status": "failed",
-                "message": "appointment already cancelled"
-            }
-
-        if appointment.status == "COMPLETED":
-            return {
-                "status": "failed",
-                "message": "completed appointments cannot be cancelled"
-            }
-
-        if appointment.status == "NO_SHOW":
-            return {
-                "status": "failed",
-                "message": "no-show appointments cannot be cancelled"
             }
 
         appointment.status = "CANCELLED"
@@ -922,7 +906,13 @@ new_slot: str
 
         normalized_name = patient_name.strip().title()
 
-        # Validate new date
+        print("RESCHEDULE REQUEST")
+        print(normalized_name)
+        print(patient_phone)
+        print(doctor_name)
+        print(old_date)
+        print(old_slot)
+
         try:
             new_dt = datetime.strptime(
                 new_date,
@@ -947,10 +937,10 @@ new_slot: str
                 func.lower(Appointment.patient_name)
                 == normalized_name.lower(),
                 Appointment.patient_phone == patient_phone,
-                Appointment.doctor_name == doctor_name,
-                Appointment.appointment_date == old_date,
-                Appointment.slot == old_slot,
                 Appointment.status == "BOOKED"
+            )
+            .order_by(
+                Appointment.appointment_date
             )
             .first()
         )
@@ -961,40 +951,20 @@ new_slot: str
                 "message": "appointment not found"
             }
 
-        if appointment.status == "CANCELLED":
-            return {
-                "status": "failed",
-                "message": "cancelled appointments cannot be rescheduled"
-            }
-
-        if appointment.status == "COMPLETED":
-            return {
-                "status": "failed",
-                "message": "completed appointments cannot be rescheduled"
-            }
-
-        if appointment.status == "NO_SHOW":
-            return {
-                "status": "failed",
-                "message": "no-show appointments cannot be rescheduled"
-            }
-
-        # Prevent same appointment rescheduling
         if (
             appointment.appointment_date == new_date
             and appointment.slot == new_slot
         ):
             return {
                 "status": "failed",
-                "message": "appointment is already scheduled for this date and time"
+                "message": "appointment already scheduled at this time"
             }
 
-        # Check whether new slot is already booked
         existing = (
             db.query(Appointment)
             .filter(
                 Appointment.id != appointment.id,
-                Appointment.doctor_name == doctor_name,
+                Appointment.doctor_name == appointment.doctor_name,
                 Appointment.appointment_date == new_date,
                 Appointment.slot == new_slot,
                 Appointment.status == "BOOKED"
