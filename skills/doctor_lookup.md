@@ -74,7 +74,7 @@ Never invent specialties.
 
 Examples:
 
-• how many doctors are available
+• how many doctors
 • total doctors
 • doctor count
 
@@ -82,11 +82,15 @@ Call:
 
 • get_doctors
 
-Count the returned doctors.
+The returned list contains every doctor.
+
+Count all returned doctor records exactly.
 
 Never estimate.
 
-Never use public hospital information.
+If the count cannot be determined reliably, say:
+
+"I couldn't determine the exact number of doctors at the moment."
 
 ---
 
