@@ -89,20 +89,16 @@ def normalize_phone_number(phone: str):
 
     return "".join(result)
 
-
 @tool
 def get_current_date():
     """
-    Returns commonly used relative dates.
+    Returns today's date and tomorrow's date.
 
     Always use this tool when the patient says:
-
     - today
     - tomorrow
-    - day after tomorrow
-    - next Monday
-    - next Friday
     - next week
+    - next Monday
 
     Never guess dates.
     """
@@ -111,31 +107,9 @@ def get_current_date():
 
     tomorrow = today + timedelta(days=1)
 
-    day_after_tomorrow = today + timedelta(days=2)
-
-    # Monday = 0
-    days_until_monday = (7 - today.weekday()) % 7
-    if days_until_monday == 0:
-        days_until_monday = 7
-
-    next_monday = today + timedelta(days=days_until_monday)
-
-    # Friday = 4
-    days_until_friday = (4 - today.weekday()) % 7
-    if days_until_friday == 0:
-        days_until_friday = 7
-
-    next_friday = today + timedelta(days=days_until_friday)
-
-    next_week = today + timedelta(days=7)
-
     return {
         "today": today.strftime("%Y-%m-%d"),
-        "tomorrow": tomorrow.strftime("%Y-%m-%d"),
-        "day_after_tomorrow": day_after_tomorrow.strftime("%Y-%m-%d"),
-        "next_monday": next_monday.strftime("%Y-%m-%d"),
-        "next_friday": next_friday.strftime("%Y-%m-%d"),
-        "next_week": next_week.strftime("%Y-%m-%d")
+        "tomorrow": tomorrow.strftime("%Y-%m-%d")
     }
 
 @tool
@@ -869,16 +843,17 @@ slot: str
     print(slot)
 
     try:
+
         appointment = (
             db.query(Appointment)
             .filter(
                 func.lower(Appointment.patient_name)
                 == normalized_name.lower(),
                 Appointment.patient_phone == patient_phone,
-                Appointment.doctor_name == doctor_name,
-                Appointment.appointment_date == appointment_date,
-                Appointment.slot == slot,
                 Appointment.status == "BOOKED"
+            )
+            .order_by(
+                Appointment.appointment_date
             )
             .first()
         )
@@ -972,10 +947,10 @@ new_slot: str
                 func.lower(Appointment.patient_name)
                 == normalized_name.lower(),
                 Appointment.patient_phone == patient_phone,
-                Appointment.doctor_name == doctor_name,
-                Appointment.appointment_date == old_date,
-                Appointment.slot == old_slot,
                 Appointment.status == "BOOKED"
+            )
+            .order_by(
+                Appointment.appointment_date
             )
             .first()
         )
