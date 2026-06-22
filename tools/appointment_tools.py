@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy import func
 
+import re
 
 @tool
 def normalize_phone_number(phone: str):
@@ -25,9 +26,12 @@ def normalize_phone_number(phone: str):
     triple six
     -> 666
 
-    This tool should always be used when a patient
-    provides a phone number by voice.
+    nine triple six five double four one zero six
+    -> 9666544106
     """
+
+    if not phone:
+        return ""
 
     phone = phone.lower()
 
@@ -45,11 +49,9 @@ def normalize_phone_number(phone: str):
         "nine": "9"
     }
 
-    tokens = (
-        phone.replace(",", " ")
-        .replace("-", " ")
-        .split()
-    )
+    phone = re.sub(r"[^a-zA-Z0-9\s]", " ", phone)
+
+    tokens = phone.split()
 
     result = []
 
@@ -57,23 +59,31 @@ def normalize_phone_number(phone: str):
 
     while i < len(tokens):
 
-        if tokens[i] == "double" and i + 1 < len(tokens):
-            digit = words.get(tokens[i + 1], "")
-            result.extend([digit, digit])
+        token = tokens[i]
+
+        if token == "double" and i + 1 < len(tokens):
+            digit = words.get(tokens[i + 1])
+
+            if digit:
+                result.extend([digit, digit])
+
             i += 2
             continue
 
-        if tokens[i] == "triple" and i + 1 < len(tokens):
-            digit = words.get(tokens[i + 1], "")
-            result.extend([digit, digit, digit])
+        if token == "triple" and i + 1 < len(tokens):
+            digit = words.get(tokens[i + 1])
+
+            if digit:
+                result.extend([digit, digit, digit])
+
             i += 2
             continue
 
-        if tokens[i] in words:
-            result.append(words[tokens[i]])
+        if token in words:
+            result.append(words[token])
 
-        elif tokens[i].isdigit():
-            result.append(tokens[i])
+        elif token.isdigit():
+            result.extend(list(token))
 
         i += 1
 
