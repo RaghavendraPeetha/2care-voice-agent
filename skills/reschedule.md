@@ -4,15 +4,15 @@ Use this skill whenever a patient wants to modify an existing appointment.
 
 Examples:
 
-* reschedule my appointment
-* change my appointment
-* move my appointment
-* change booking
-* change the time
-* move it to tomorrow
-* reschedule tomorrow appointment
-* change to afternoon
-* move it to 2 PM
+• reschedule my appointment
+• change my appointment
+• move my appointment
+• change booking
+• change the time
+• move it to tomorrow
+• reschedule tomorrow appointment
+• change to afternoon
+• move it to 2 PM
 
 ---
 
@@ -20,7 +20,7 @@ Examples:
 
 Appointments are private.
 
-Never reveal appointments belonging to other patients.
+Never reveal another patient's appointments.
 
 Patient verification is mandatory.
 
@@ -30,16 +30,47 @@ Never reschedule appointments without verification.
 
 # Patient Verification
 
-Collect:
+Required:
 
-* patient_name
-* patient_phone
+• patient_name
+• patient_phone
 
-If either is missing:
+If already verified during the current conversation:
 
-"Please provide your name and registered phone number."
+DO NOT ask again.
 
-Never continue without verification.
+Verified patient information remains valid for the entire session.
+
+Ask only for missing information.
+
+---
+
+# Previously Selected Appointment
+
+If an appointment has already been retrieved:
+
+Reuse:
+
+• doctor
+• date
+• slot
+
+Examples:
+
+User:
+"Reschedule it."
+
+User:
+"Move that appointment."
+
+User:
+"Change the same appointment."
+
+Use the selected appointment.
+
+Do not ask again.
+
+Do not retrieve appointments again.
 
 ---
 
@@ -49,19 +80,19 @@ After verification:
 
 Call:
 
-* get_patient_appointments
+• get_patient_appointments
 
 Only BOOKED appointments may be rescheduled.
 
 Never use:
 
-* get_appointment_history
+• get_appointment_history
 
 Never reschedule:
 
-* CANCELLED appointments
-* COMPLETED appointments
-* NO_SHOW appointments
+• CANCELLED appointments
+• COMPLETED appointments
+• NO_SHOW appointments
 
 ---
 
@@ -77,14 +108,15 @@ Stop the workflow.
 
 # Single Appointment
 
-If only one active appointment exists:
+If only one appointment exists:
 
 Display:
 
-* Doctor
-* Date
-* Time
-* Status
+Patient:
+Doctor:
+Date:
+Time:
+Status:
 
 Ask:
 
@@ -117,11 +149,11 @@ Ask:
 
 Accept:
 
-* today
-* tomorrow
-* next Monday
-* day after tomorrow
-* specific dates
+• today
+• tomorrow
+• next Monday
+• day after tomorrow
+• specific dates
 
 Use date reasoning.
 
@@ -133,15 +165,21 @@ Past dates are not allowed.
 
 If the patient says:
 
-* change only the time
-* same day
-* move it to 2 PM
-* keep the same date
-* later that day
+• same day
+• same date
+• move it to 2 PM
+• keep the same date
+• later that day
 
 Keep the existing appointment date.
 
 Do not ask for another date.
+
+Examples:
+
+"Move it to 3 PM."
+
+Use the existing appointment date.
 
 ---
 
@@ -151,48 +189,49 @@ After determining the new date:
 
 Call:
 
-* get_available_slots
+• get_available_slots
+
+Always retrieve fresh slot information.
+
+Never reuse previously displayed slots.
 
 Only display returned slots.
 
 Never invent slots.
 
-Never use OPD timings.
-
 ---
 
-# Time Expressions
+# Time Preference Rules
 
-Patients may say:
+Words such as:
 
-* morning
-* afternoon
-* evening
-* any slot
-* earliest slot
-* latest slot
+• morning
+• afternoon
+• evening
 
-Rules:
+are not appointment slots.
 
 If multiple matching slots exist:
 
-Display them.
+Display:
 
-Example:
-
-Afternoon slots:
-
-* 01:00 PM
-* 02:00 PM
-* 03:00 PM
+• 01:00 PM
+• 02:00 PM
+• 03:00 PM
 
 Ask:
 
 "Which slot would you prefer?"
 
-If only one matching slot exists, suggest it.
+If only one matching slot exists:
 
-Never automatically select a slot.
+Suggest it.
+
+Wait for confirmation.
+
+Never automatically choose a slot.
+
+Never default to the earliest slot.
 
 ---
 
@@ -200,7 +239,7 @@ Never automatically select a slot.
 
 If the requested slot is unavailable:
 
-Display available alternatives.
+Display alternatives.
 
 Example:
 
@@ -208,40 +247,72 @@ Example:
 
 Available slots:
 
-* 11:00 AM
-* 01:00 PM
-* 03:00 PM"
+• 11:00 AM
+• 01:00 PM
+• 03:00 PM"
 
 Ask the patient to choose.
 
-Never automatically change appointments.
+Never automatically change the appointment.
 
 ---
 
 # Same Date and Same Time
 
-If the patient selects the same date and same time:
+If:
+
+old_date == new_date
+
+and
+
+old_slot == new_slot
 
 Respond:
 
 "Your appointment is already scheduled for that date and time."
 
-Do not call the rescheduling tool.
+Do not call the tool.
 
 ---
 
-# Changing the Doctor
+# Changing Doctors
 
 Rescheduling changes only:
 
-* date
-* time
+• date
+• time
 
-Doctor changes require a new booking.
+Doctor changes require a new booking workflow.
 
 If the patient wants another doctor:
 
-Start a new booking workflow.
+Start booking.
+
+---
+
+# Voice Recognition Rules
+
+Voice recognition may slightly change names.
+
+Examples:
+
+• Gopi Krishna Rayidi
+• Gopi Krishna Raidi
+
+• Damodhar Reddy Gouni
+• Damodar Reddy Gowni
+
+If an appointment has already been selected:
+
+Use:
+
+• selected doctor
+• selected date
+• selected slot
+
+Never ask the patient to repeat doctor names.
+
+Previously selected appointments are more reliable than speech recognition.
 
 ---
 
@@ -249,83 +320,120 @@ Start a new booking workflow.
 
 Before calling the tool display:
 
-Patient Name:
-Phone Number:
+Patient:
+Phone:
 Doctor:
 Old Date:
 Old Time:
 New Date:
 New Time:
 
+Always display actual calendar dates.
+
+Correct:
+
+June 23, 2026
+
+Incorrect:
+
+tomorrow
+
+---
+
+# Confirmation Rules
+
 Ask:
 
 "Would you like me to confirm this rescheduling?"
 
----
-
-# Valid Confirmations
-
 Valid:
 
-* yes
-* confirm
-* proceed
-* go ahead
-* reschedule it
+• yes
+• confirm
+• proceed
+• go ahead
+• reschedule it
+• yes please
 
-Invalid:
+Only one confirmation is required.
 
-* okay
-* fine
-* sure
-* maybe
+Never ask twice.
 
-If unclear:
+Never ask:
 
-"Please reply with yes or confirm."
+• Are you sure?
+• Shall I continue?
 
 ---
 
 # Tool Rules
 
-Never call:
+Call:
 
-* reschedule_patient_appointment
+• reschedule_patient_appointment
 
-until:
+only after:
 
-* patient verified
-* appointment selected
-* new date selected
-* new slot selected
-* summary shown
-* confirmation received
+• patient verified
+• appointment selected
+• new date selected
+• new slot selected
+• summary shown
+• confirmation received
 
 Required:
 
-* patient_name
-* patient_phone
-* doctor_name
-* old_date
-* old_slot
-* new_date
-* new_slot
+• patient_name
+• patient_phone
+• doctor_name
+• old_date
+• old_slot
+• new_date
+• new_slot
 
 Never guess values.
 
 ---
 
-# User Changes Mind
+# Information Validation
 
-If the patient changes:
+If validation fails:
 
-* doctor
-* date
-* slot
+Ask only for the invalid information.
 
-Use the newest information.
+Examples:
 
-The latest patient request overrides previous choices.
+Invalid date:
+Ask for the date.
+
+Invalid slot:
+Show available slots.
+
+Invalid phone:
+Ask for the phone number.
+
+Never restart the workflow.
+
+Never ask again for verified information.
+
+---
+
+# Latest User Request
+
+The latest patient instruction overrides previous choices.
+
+Examples:
+
+User:
+"Actually make it tomorrow."
+
+User:
+"No, afternoon is fine."
+
+User:
+"Change it to 3 PM."
+
+Use the latest request.
 
 ---
 
@@ -333,28 +441,36 @@ The latest patient request overrides previous choices.
 
 Never:
 
-* reveal another patient's appointments
-* display all appointments
-* guess patient identity
-* reveal internal IDs
-* expose database information
+• reveal another patient's appointments
+• display all appointments
+• reveal internal IDs
+• expose database information
 
-Only verified patients may reschedule their appointments.
+Only verified patients may reschedule appointments.
 
 ---
 
-# Voice Examples
+# Success Response
 
-Examples:
+After successful rescheduling:
 
-"Move it to tomorrow afternoon."
+"Your appointment with Dr. ______ has been successfully rescheduled to June 23, 2026 at 3:00 PM."
 
-"Change it to 2 PM."
+Ask:
 
-"Keep the same doctor."
+"Would you like any further assistance?"
 
-"Move it to the next available slot."
+---
 
-"Any afternoon slot is fine."
+# Critical Restrictions
 
-Handle these naturally while still requiring explicit confirmation before rescheduling.
+Never:
+
+• ask for verification twice
+• ask for confirmation twice
+• ask for the doctor name again
+• ask for the old appointment again
+• lose the selected appointment
+• restart the workflow
+
+Previously selected appointments always have priority.
