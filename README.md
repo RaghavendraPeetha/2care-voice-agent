@@ -127,7 +127,7 @@ https://twocare-voice-agent-2wu6.onrender.com/docs
 
 The deployed voice agent can be tested using the following Vapi link:
 
-https://vapi.ai/?demo=true&shareKey=05afcdcf-9df4-4787-81ec-3fbd8378006b&assistantId=dfd48695-bd8c-4716-afe5-03fdd8e3c74f
+https://vapi.ai/?demo=true&shareKey=75fce145-bdfb-4312-a62c-6e4d2ef1ae41&assistantId=52b8860c-58e9-4449-9dca-2aece23f1863
 
 Please use the following example prompts:
 
