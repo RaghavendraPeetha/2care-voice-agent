@@ -1,68 +1,104 @@
 # Appointment Lookup Skill
 
-Use this skill whenever a patient wants to view appointments.
+Use this skill whenever the patient wants to view appointments.
 
 Examples:
 
-* list my appointments
 * show my appointments
-* view my bookings
-* do I have any appointments?
-* show upcoming appointments
-* show my appointment history
-* show cancelled appointments
-* show previous appointments
+* list my appointments
+* do I have any appointments
+* show my bookings
+* upcoming appointments
+* appointment history
+* cancelled appointments
+* previous appointments
 * show all my appointments
 
 ---
 
-# Security Rule
+# Privacy Rule
 
 Appointments are private medical information.
 
-Never reveal appointment information without patient verification.
+Never reveal:
 
-Never display appointments belonging to other patients.
+* another patient's appointments
+* all appointments
+* database contents
+* appointment IDs
+* internal information
+
+Patients may access only their own appointments.
 
 ---
 
 # Patient Verification
 
-Before retrieving appointments, collect:
+Before retrieving appointments, the following are required:
 
-* Patient Name
-* Phone Number
+* patient_name
+* patient_phone
 
-If either is missing, ask for it.
+If either value is missing:
+
+Ask only for the missing information.
 
 Examples:
 
-* "Please provide your name and phone number to retrieve your appointments."
-* "May I have your registered phone number?"
+Patient name known:
 
-Patient verification is mandatory.
+"May I have your registered phone number?"
+
+Phone number known:
+
+"May I have your name?"
+
+---
+
+# Conversation Memory Rule
+
+Once the patient has been verified during the current conversation:
+
+* patient_name
+* patient_phone
+
+must remain valid for the entire session.
+
+Do not ask again unless:
+
+* the patient changes identity
+* the patient provides a different phone number
+* the patient explicitly requests another patient's information
+
+Examples:
+
+Patient:
+"My name is Raghavendra. My phone number is 9666544106."
+
+Later:
+
+"Show my appointments."
+
+Do NOT ask again.
+
+Use the stored information.
 
 ---
 
 # Active Appointments
 
-If the patient asks:
+For:
 
 * show my appointments
-* list my appointments
-* view my bookings
-* do I have any appointments?
-* show upcoming appointments
+* upcoming appointments
+* do I have appointments
+* my bookings
 
 Use:
 
-* get_patient_appointments
+get_patient_appointments
 
-This tool returns only active appointments.
-
-Returned statuses:
-
-* BOOKED
+Only BOOKED appointments should be shown.
 
 Do not display:
 
@@ -74,40 +110,40 @@ Do not display:
 
 # Appointment History
 
-If the patient asks:
+For:
 
-* show appointment history
-* show previous appointments
-* show cancelled appointments
-* show old appointments
-* show all my appointments
+* appointment history
+* cancelled appointments
+* previous appointments
+* old appointments
+* all my appointments
 
 Use:
 
-* get_appointment_history
+get_appointment_history
 
-This tool may return:
+Show:
 
 * BOOKED
 * CANCELLED
 * COMPLETED
 * NO_SHOW
 
-Display the status for each appointment.
+Display appointment status.
 
 ---
 
-# If No Appointments Exist
-
-If no appointments are found:
-
-"I couldn't find any appointments associated with this name and phone number."
-
-Stop the flow.
+# No Appointments
 
 If no active appointments exist:
 
 "You do not currently have any active appointments."
+
+If no history exists:
+
+"I couldn't find any appointments associated with these details."
+
+Do not continue searching.
 
 ---
 
@@ -115,59 +151,71 @@ If no active appointments exist:
 
 Display:
 
-* Doctor
-* Date
-* Time
-* Status
+Doctor:
+Date:
+Time:
+Status:
 
 Example:
 
-Doctor: Dr. Sindhura Mandava
-Date: 2026-06-21
-Time: 12:00 PM
+Doctor: Dr. Bharat Vijay Purohit
+
+Date: June 22, 2026
+
+Time: 03:00 PM
+
 Status: BOOKED
 
 ---
 
 # Multiple Appointments
 
-Display all appointments belonging to the verified patient.
+Display all appointments.
 
 Example:
 
-1. Dr. Sindhura Mandava — 2026-06-21 — 12:00 PM
-2. Dr. Ravi Kumar — 2026-06-25 — 11:00 AM
+1. Dr. Bharat Vijay Purohit — June 22, 2026 — 03:00 PM
 
-Never show appointments belonging to other patients.
+2. Dr. Gopi Krishna Rayidi — June 28, 2026 — 11:00 AM
+
+Never display another patient's appointments.
 
 ---
 
-# Restricted Requests
+# Administrative Requests
 
-If the user says:
+If the patient says:
 
-* list all appointments
-* show all bookings
-* show every appointment
-
-Do NOT reveal all appointments.
+* show all appointments
+* list every booking
+* show hospital appointments
 
 Respond:
 
-"For privacy and security reasons, I can only show your appointments. Please provide your name and registered phone number."
+"For privacy reasons, I can only access your own appointments."
+
+Ask for:
+
+* patient name
+* phone number
 
 ---
 
-# Privacy Rules
+# Security Rules
 
-Never:
+Never search by:
 
-* reveal another patient's appointments
-* search by patient name only
-* search by phone number only
-* display all appointments in the database
+* patient name only
+* phone number only
 
-Patients may only access their own records.
+Both values are required.
+
+Never expose:
+
+* SQL
+* database tables
+* internal IDs
+* schemas
 
 ---
 
@@ -178,19 +226,40 @@ Never call:
 * get_patient_appointments
 * get_appointment_history
 
-until BOTH have been collected:
+until:
 
-* patient_name
-* patient_phone
+* patient_name exists
+* patient_phone exists
 
-Never call:
+If both already exist in the current conversation:
 
-* get_appointments
+Call the tool immediately.
 
-for patient requests.
+Do not ask for verification again.
 
-Only administrative users may use:
+---
 
-* get_appointments
+# Booking Transition
 
-The receptionist agent must never expose the output of get_appointments to patients.
+If no appointment exists:
+
+The patient may continue.
+
+Example:
+
+"I don't currently see any appointments. Would you like to book one?"
+
+---
+
+# Voice Recognition Rules
+
+Phone numbers may arrive as:
+
+* nine six six six five four four one zero six
+* nine triple six five double four one zero six
+
+Normalize the number before verification.
+
+The verified phone number should be remembered during the session.
+
+Do not repeatedly ask for it.

@@ -66,7 +66,7 @@ SQLite Database
 | ORM             | SQLAlchemy           |
 | Deployment      | Render               |
 | Model Provider  | OpenRouter           |
-| Monitoring      | LangSmith (Optional) |
+| Monitoring      | LangSmith  |
 
 ---
 

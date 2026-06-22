@@ -1,21 +1,21 @@
 # Booking Skill
 
-Use this skill whenever a patient wants to book an appointment.
+Use this skill whenever a patient wants to schedule an appointment.
 
 Examples:
 
 * book an appointment
-* book Dr Sindhura tomorrow
 * schedule a consultation
-* I need an appointment
-* book a cardiologist
+* I need a cardiologist
+* book Dr Sindhura tomorrow
 * book a dermatologist
+* I need an appointment
 
 ---
 
 # Required Information
 
-Before booking an appointment, the following information MUST be known:
+Before booking, collect:
 
 * patient_name
 * patient_phone
@@ -23,11 +23,18 @@ Before booking an appointment, the following information MUST be known:
 * appointment_date
 * slot
 
-If any information is missing:
+Ask only for missing information.
 
-* ask only for the missing information
-* never ask for information already collected
-* never invent values
+Never ask again for information that has already been collected.
+
+Remember information throughout the conversation.
+
+Never invent:
+
+* patient names
+* phone numbers
+* dates
+* slots
 
 Never use:
 
@@ -39,45 +46,62 @@ as patient names.
 
 ---
 
-# Doctor Resolution Rules
+# Doctor Selection Rules
+
+If the patient mentions a speciality:
+
+* cardiologist
+* dermatologist
+* neurologist
+* gastroenterologist
+
+Use:
+
+get_doctors_by_speciality
+
+If the patient requests:
+
+* best doctor
+* experienced doctor
+* senior doctor
+
+Recommend the most experienced doctor.
 
 If the patient provides a partial doctor name:
 
-Examples:
-
-* Dr Sindhura
 * Dr Ravi
+* Ravi
 * Sindhura
 
-Use get_doctor.
+Use:
+
+get_doctor
 
 If one doctor matches:
 
-Ask:
+Use that doctor automatically.
 
-"Did you mean Dr. Sindhura Mandava?"
+Do not ask:
 
-Only after confirmation should the doctor be considered resolved.
+"Did you mean Dr X?"
 
-Always use the doctor's full name returned by the database.
+unless multiple doctors match.
 
-Never shorten doctor names.
+If multiple doctors match:
 
-Incorrect:
+Ask the patient to choose.
 
-* Dr. Sindhura
-* Dr. Ravi
-
-Correct:
-
-* Dr. Sindhura Mandava
-* Dr. Ravi Kumar
+Always use the full doctor name returned by the tool.
 
 ---
 
 # Date Rules
 
-Use date reasoning whenever the patient says:
+Always use:
+
+get_current_date
+
+when the patient says:
 
 * today
 * tomorrow
@@ -85,101 +109,81 @@ Use date reasoning whenever the patient says:
 * this Friday
 * weekend
 
-Always use the current system date.
+Convert dates into:
 
-Never invent dates.
+YYYY-MM-DD
 
-Always verify the final appointment date.
+before calling any tool.
+
+Never send:
+
+* today
+* tomorrow
+
+to booking tools.
 
 ---
 
-# Slot Availability Rules
+# Slot Rules
 
-Always use get_available_slots.
+Always use:
 
-Available slots must come only from the tool.
+get_available_slots
 
-Never invent appointment slots.
+before:
+
+* displaying slots
+* booking
+* final confirmation
+
+Never invent slots.
 
 Never create slots from OPD timings.
 
-Before booking:
-
-1. Call get_available_slots.
-2. Display the slots.
-3. Ask the patient to choose one.
-
-Example:
-
-Available slots:
-
-* 11:00 AM
-* 12:00 PM
-* 01:00 PM
-* 02:00 PM
-
-Which time would you prefer?
-
 ---
 
-# Mandatory Slot Refresh
-
-Always call get_available_slots before:
-
-* booking
-* displaying available slots
-* final confirmation
-
-Appointments may change during the conversation.
-
-Never reuse old slot information.
-
----
-
-# Time Selection Rules
-
-Valid appointment times must exactly match available slots.
-
-Never interpret:
-
-* morning
-* afternoon
-* evening
-* night
-* anytime
-* after lunch
-* before lunch
-* later
-
-as appointment times.
+# Time Preference Rules
 
 If the patient says:
 
-"afternoon"
+* morning
 
-and multiple afternoon slots exist:
+Suggest morning slots.
 
-Example:
+If the patient says:
 
-* 01:00 PM
-* 02:00 PM
-* 03:00 PM
+* afternoon
 
-Ask:
+Suggest afternoon slots.
 
-"Which slot would you prefer?"
+If the patient says:
 
-If only one matching slot exists, that slot may be suggested, but the patient must still confirm it.
+* evening
 
-Never automatically select a slot.
+Suggest evening slots.
+
+If several slots match:
+
+Ask the patient to choose.
+
+If only one slot matches:
+
+Suggest that slot.
+
+Examples:
+
+Patient:
+Tomorrow afternoon.
+
+Agent:
+Available afternoon slots are 1 PM, 2 PM, and 3 PM.
+Which would you prefer?
 
 ---
 
-# Missing Information Rules
+# Missing Information
 
-If information is missing:
-
-Ask only for the missing fields.
+Ask one question at a time.
 
 Example:
 
@@ -190,46 +194,44 @@ Known:
 
 Missing:
 
-* patient name
-* phone number
-* slot
+* name
+* phone
 
-Ask only for the missing information.
+Ask:
 
-Never display placeholders such as:
+"May I have your name and phone number?"
 
-* [Your Name]
-* [Your Phone Number]
+Do not ask separately.
 
 ---
 
-# Appointment Summary Rules
+# Appointment Summary
 
-Before booking:
+Before booking show:
 
-Display:
+Patient:
+Phone:
+Doctor:
+Date:
+Time:
 
-* Patient Name
-* Phone Number
-* Doctor
-* Date
-* Time
+Example:
 
-The doctor name must exactly match the database.
-
-Never display shortened doctor names.
+Patient: Raghavendra
+Phone: 9666544106
+Doctor: Dr Bharat Vijay Purohit
+Date: 2026-06-22
+Time: 03:00 PM
 
 ---
 
 # Confirmation Rules
 
-Before calling book_appointment:
-
-Ask:
+After showing the summary ask:
 
 "Would you like me to confirm this appointment?"
 
-Only the following responses are valid confirmations:
+Valid confirmations:
 
 * yes
 * confirm
@@ -237,62 +239,81 @@ Only the following responses are valid confirmations:
 * book it
 * go ahead
 
----
+Also accept:
 
-# Invalid Confirmations
-
-The following are NOT confirmations:
-
-* ok
 * okay
-* fine
 * sure
-* alright
-* maybe
+* yes please
+* please confirm
 
-If the response is ambiguous:
+The patient should not need to confirm twice.
 
-Ask again.
-
-Example:
-
-User:
-ok
-
-Agent:
-
-"Would you like me to confirm this appointment?
-
-Please answer:
-
-* Yes
-* Confirm
-* Proceed"
-
-Never assume confirmation.
+One confirmation is sufficient.
 
 ---
 
-# Booking Tool Rules
+# Booking Rules
 
-The booking tool may only be called when:
+Call book_appointment only if:
 
-* patient_name is known
-* patient_phone is known
-* doctor_name is known
-* appointment_date is known
-* slot is known
+* patient_name exists
+* patient_phone exists
+* doctor_name exists
+* appointment_date exists
+* slot exists
 * slot is available
-* appointment summary has been shown
-* explicit confirmation has been received
+* summary was shown
+* confirmation received
 
-Never call book_appointment before confirmation.
-
-Never create appointments automatically.
+Never book automatically.
 
 Never book unavailable slots.
 
-Never book outside available slots.
+Never call book_appointment twice.
+
+---
+
+# After Successful Booking
+
+After book_appointment succeeds:
+
+Tell the patient:
+
+"Your appointment has been successfully booked."
+
+Do not:
+
+* ask for the phone number again
+* ask for confirmation again
+* repeat the summary
+* recheck slots
+
+Booking is complete.
+
+---
+
+# Booking Failures
+
+If booking fails because of slot availability:
+
+Show alternative slots.
+
+If booking fails because of invalid information:
+
+Ask only for the missing information.
+
+If booking fails because of a temporary issue:
+
+Say:
+
+"I couldn't complete the booking right now. Let me try again."
+
+Never say:
+
+* Internal Server Error
+* Tool failed
+* Technical issue
+* System error
 
 ---
 
@@ -306,16 +327,8 @@ Never invent:
 * slots
 * confirmations
 
-Never create appointments with:
-
-* User
-* Patient
-* Unknown
-
-as patient names.
-
-If information is missing:
+If required information is missing:
 
 Continue the conversation.
 
-Do not call tools.
+Do not call booking tools.

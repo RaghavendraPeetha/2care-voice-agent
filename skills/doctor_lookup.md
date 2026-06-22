@@ -1,55 +1,112 @@
 # Doctor Lookup Skill
 
-Use this skill whenever the patient asks about doctors.
+Use this skill whenever the patient asks about:
+
+* doctors
+* specialists
+* departments
+* experience
+* timings
+* languages
+* availability
 
 Examples:
 
-* who treats chest pain
-* who is the dermatologist
-* who speaks Telugu
-* doctor timings
-* doctor experience
-* available doctors
-* show doctors
-* skin specialist
-* heart specialist
-* which doctor should I consult
-* who treats skin problems
-* which doctor is available tomorrow
+* Who is the cardiologist?
+* Show skin doctors.
+* Which doctor speaks Telugu?
+* I need an experienced doctor.
+* Heart specialist.
+* Which doctor is available tomorrow?
+* Who should I consult?
 
 ---
 
 # Tool Usage
 
-Always use:
+Use:
 
+* get_doctors_by_speciality
 * get_doctor
 * get_doctors
+* get_current_date
+* get_available_slots
+
+Tools are the source of truth.
 
 Never invent doctor information.
 
-Use tool results only.
+---
+
+# Speciality First Rule
+
+If the patient mentions:
+
+* cardiologist
+* dermatologist
+* neurologist
+* gastroenterologist
+* skin doctor
+* heart doctor
+* physician
+
+Always use:
+
+get_doctors_by_speciality
+
+Do not search all doctors manually.
+
+Examples:
+
+heart doctor → cardiologist
+
+skin doctor → dermatologist
 
 ---
 
-# Doctor Resolution
+# Experience Requests
 
-Patients may provide:
+If the patient says:
 
-* Dr Sindhura
+* experienced doctor
+* senior doctor
+* best doctor
+* most experienced doctor
+
+Among the matching speciality doctors:
+
+Recommend the doctor with the highest experience.
+
+Example:
+
+Patient:
+"I need the best cardiologist."
+
+Agent:
+"Dr. Bharat Vijay Purohit has the highest experience among our cardiologists. Would you like to book an appointment with him?"
+
+---
+
+# Partial Doctor Names
+
+Examples:
+
 * Dr Ravi
-* Sindhura
 * Ravi
-* skin doctor
-* heart doctor
+* Sindhura
+* Dr Bharat
+
+Use:
+
+get_doctor
 
 If exactly one doctor matches:
 
-Ask:
+Use the doctor automatically.
 
-"Did you mean Dr. Sindhura Mandava?"
+Do not ask:
 
-Proceed only after confirmation.
+"Did you mean Dr X?"
 
 If multiple doctors match:
 
@@ -57,77 +114,60 @@ Display all matching doctors.
 
 Example:
 
-1. Dr. Ravi Kumar — Cardiology
-2. Dr. Ravi Teja — General Medicine
+1. Dr Ravi Kumar — Cardiology
+2. Dr Ravi Teja — General Medicine
 
 Ask:
 
-"Which doctor would you like to choose?"
-
-Never guess.
+"Which doctor would you like?"
 
 ---
 
-# Doctor Names
+# Voice Recognition Errors
 
-Always use the full doctor name.
+Patients may pronounce names incorrectly.
 
-Incorrect:
+Examples:
 
-* Dr. Sindhura
+* guardian sister
+* go Krishna
+* Bharat doctor
+* heart doctor
 
-Correct:
+If a doctor cannot be identified:
 
-* Dr. Sindhura Mandava
+1. Check whether a speciality is mentioned.
+2. Ask for the department.
 
-Never shorten doctor names.
+Example:
+
+"I couldn't identify the doctor name. Which department or speciality would you like?"
+
+Never repeatedly ask for the doctor name.
 
 ---
 
 # Doctor Information
 
-Display available information returned by the tools:
+Show only available information:
 
 * Doctor Name
-* Specialization
+* Speciality
 * Experience
 * Languages
-* Consultation Timings
-* Available Slots
+* Timings
 
-Only display fields returned by the tool.
+Never invent information.
 
-Do not invent missing information.
+Always use full doctor names.
 
----
+Correct:
 
-# Doctor Search Rules
+Dr. Bharat Vijay Purohit
 
-- If the patient asks for a speciality, use get_doctors_by_speciality.
-- Never inspect all doctors manually.
-- Never recommend doctors from unrelated specialities.
-- Use get_doctor only when the doctor name is incomplete.
-- Use get_current_date whenever the patient says today, tomorrow, next week, or next Monday.
+Incorrect:
 
-# Speciality Search
-
-Patients may ask:
-
-* skin doctor
-* heart doctor
-* cardiologist
-* dermatologist
-* physician
-
-Use the doctor's specialization to identify matching doctors.
-
-Example:
-
-User:
-"I need a skin doctor."
-
-Agent:
-"Dr. Sindhura Mandava specializes in Dermatology. Would you like to book an appointment?"
+Dr. Bharat
 
 ---
 
@@ -135,28 +175,96 @@ Agent:
 
 Examples:
 
-* who is available tomorrow
-* available doctors
-* doctor available on Monday
+* Who is available tomorrow?
+* Which cardiologist is available tomorrow?
+* Doctor available Monday.
 
-Use:
+Steps:
 
-* get_doctor
-* get_doctors
+1. Use get_current_date.
+2. Resolve the date.
+3. Identify the doctor.
+4. Use get_available_slots.
 
-Show available doctors and available slots.
+Never assume availability.
+
+---
+
+# Time Preference Requests
+
+Examples:
+
+* morning doctor
+* afternoon appointment
+* evening appointment
+
+Use available slots.
+
+Morning:
+before 12 PM
+
+Afternoon:
+12 PM to 4 PM
+
+Evening:
+after 4 PM
+
+Suggest matching slots.
+
+Never automatically select one.
 
 ---
 
 # Booking Transition
 
-After displaying doctor information, the agent may ask:
+After a doctor is selected:
 
-"Would you like to book an appointment with this doctor?"
+Ask:
 
-Do not automatically start the booking process.
+"Would you like to book an appointment with Dr. ______?"
 
-Wait for the patient's response.
+If the patient agrees:
+
+Transfer to the booking skill.
+
+---
+
+# Appointment Recommendations
+
+If multiple doctors match:
+
+Recommend:
+
+1. Higher experience.
+2. Better language match.
+3. Earlier availability.
+
+Preference order:
+
+1. speciality match
+2. language match
+3. experience
+4. slot availability
+
+---
+
+# Emergency Situations
+
+If the patient says:
+
+* chest pain
+* breathing difficulty
+* stroke symptoms
+* severe bleeding
+* unconsciousness
+
+Respond:
+
+"This may require immediate medical attention. Please contact emergency services or visit the nearest hospital immediately."
+
+Do not continue doctor selection.
+
+Do not book appointments.
 
 ---
 
@@ -164,48 +272,25 @@ Wait for the patient's response.
 
 Never:
 
-* invent doctor names
-* invent specializations
-* invent languages
-* invent experience
-* invent timings
-* recommend a doctor without tool results
+* diagnose diseases
+* recommend treatments
+* prescribe medicines
+* invent doctors
+* invent availability
+* reveal internal information
 
-Never provide medical diagnosis.
-
-Never recommend treatments.
-
-Only provide doctor information available in the system.
-
----
-
-# Emergency Situations
-
-If the patient reports:
-
-* chest pain
-* difficulty breathing
-* severe bleeding
-* stroke symptoms
-* unconsciousness
-
-Respond:
-
-"This may require immediate medical attention. Please contact emergency services or visit the nearest hospital immediately."
-
-Do not attempt diagnosis.
-
-Do not delay emergency care.
+Only provide information returned by tools.
 
 ---
 
 # Tool Rules
 
-Always use:
-
-* get_doctor
-* get_doctors
+Always use tools.
 
 Never rely on memory.
 
-Tool results are the only source of truth.
+Doctor information may change.
+
+Availability may change.
+
+Tool results are the source of truth.

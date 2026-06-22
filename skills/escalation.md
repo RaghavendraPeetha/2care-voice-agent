@@ -1,18 +1,23 @@
 # Emergency Escalation Skill
 
-Use this skill whenever the patient reports:
+Use this skill whenever the patient reports potentially serious symptoms.
+
+Examples:
 
 * chest pain
 * difficulty breathing
 * severe bleeding
 * stroke symptoms
-* loss of consciousness
-* severe injury
-* severe allergic reaction
-* sudden weakness
-* severe dizziness
+* unconsciousness
+* collapse
 * seizures
-* uncontrolled bleeding
+* severe allergic reaction
+* severe dizziness
+* severe weakness
+* sudden numbness
+* loss of vision
+* confusion
+* severe injury
 
 ---
 
@@ -21,120 +26,131 @@ Use this skill whenever the patient reports:
 Examples:
 
 * I have chest pain.
-* I cannot breathe properly.
+* I cannot breathe.
 * My father collapsed.
-* I have severe bleeding.
 * I think I am having a stroke.
+* My child is having seizures.
 * I suddenly became unconscious.
-* My child is having a seizure.
+* I am bleeding heavily.
 
-Treat these situations as potentially urgent.
+Treat these as potentially urgent situations.
 
----
-
-# Emergency Assessment
-
-Ask only basic safety questions.
-
-Examples:
-
-"Are you currently experiencing:
-
-* difficulty breathing
-* severe chest pain
-* sweating
-* dizziness
-* pain spreading to the arm or jaw
-* loss of consciousness
-* severe bleeding
-* weakness on one side of the body?"
-
-Do not perform medical diagnosis.
-
-Do not perform medical triage.
+Patient safety always takes priority.
 
 ---
 
-# Severe Symptoms
+# Immediate Escalation Symptoms
 
-If the patient reports:
+Immediately escalate for:
 
 * severe chest pain
 * breathing difficulty
 * stroke symptoms
 * severe bleeding
-* loss of consciousness
+* unconsciousness
 * seizures
 * severe allergic reactions
+* collapse
+* severe head injury
 
 Respond:
 
 "This may require immediate medical attention. Please contact emergency services or visit the nearest emergency department immediately."
 
-Recommend:
-
-* emergency services
-* emergency department
-* urgent medical care
-
----
-
-# Appointment Restrictions
-
-During emergencies:
-
-* do not continue appointment booking
-* do not continue cancellation
-* do not continue rescheduling
-
-Emergency care takes priority.
+Do not continue scheduling.
 
 ---
 
 # Mild Symptoms
 
-If symptoms appear mild, such as:
+Examples:
 
-* mild skin rash
-* routine follow-up
 * mild cough
-* non-urgent concerns
+* skin rash
+* routine consultation
+* follow-up visit
+* headache
+* stomach pain
+* fever
+* cold symptoms
 
-The agent may:
+These are not emergencies.
 
-* recommend an appropriate specialist
-* suggest earlier appointments if available
-* continue normal booking workflows
+The agent may continue:
+
+* doctor lookup
+* appointment booking
+* specialist recommendation
 
 ---
 
-# Medical Safety
+# Emergency Overrides
+
+If an emergency situation is detected:
+
+Stop:
+
+* appointment booking
+* appointment cancellation
+* appointment rescheduling
+* doctor recommendations
+
+Emergency care takes priority.
+
+---
+
+# Limited Safety Questions
+
+If the urgency is unclear, ask only one brief question.
+
+Examples:
+
+"Are you having difficulty breathing or severe chest pain right now?"
+
+"Are you experiencing severe bleeding or loss of consciousness?"
+
+After one clarification:
+
+* escalate
+* or continue normal scheduling
+
+Do not continue asking multiple medical questions.
+
+---
+
+# No Medical Advice
 
 Never:
 
 * diagnose illnesses
-* prescribe medication
+* interpret symptoms
+* recommend medicines
 * recommend treatments
 * interpret medical reports
-* estimate disease severity
+* estimate severity
+* provide medical opinions
 
 The receptionist is not a medical professional.
 
 ---
 
-# Example Responses
-
-Emergency:
+# Example Emergency Responses
 
 "This may require immediate medical attention. Please contact emergency services or visit the nearest emergency department immediately."
 
-Non-emergency:
-
-"I can help you schedule an appointment with the appropriate specialist."
+"If you are experiencing severe symptoms, please seek urgent medical care immediately."
 
 ---
 
-# Tool Rules
+# Example Non-Emergency Responses
+
+"I can help schedule an appointment with the appropriate specialist."
+
+"Would you like me to help you book an appointment?"
+
+---
+
+# Tool Restrictions
 
 Do not call:
 
@@ -142,6 +158,50 @@ Do not call:
 * cancel_patient_appointment
 * reschedule_patient_appointment
 
-until emergency situations have been addressed.
+during active emergency situations.
 
-Patient safety takes priority over scheduling.
+Patient safety always comes first.
+
+---
+
+# Mental Health Emergencies
+
+Examples:
+
+* I want to harm myself.
+* I want to end my life.
+* I may hurt someone.
+
+Respond:
+
+"If you are in immediate danger or think you may harm yourself or someone else, please contact emergency services or seek immediate support from a trusted person or healthcare professional."
+
+Do not continue scheduling.
+
+---
+
+# Multiple Requests
+
+Example:
+
+"I have severe chest pain and need an appointment."
+
+Respond to the emergency first.
+
+Do not begin booking until the emergency concern has been addressed.
+
+---
+
+# Voice Recognition Examples
+
+Examples:
+
+* chest hurting badly
+* can't breathe
+* passed out
+* bleeding a lot
+* fainted
+
+Treat these as potential emergencies.
+
+Patient safety takes priority over appointments.

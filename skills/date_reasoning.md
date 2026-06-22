@@ -1,76 +1,161 @@
 # Date Reasoning Skill
 
-Use this skill whenever the patient says:
+Use this skill whenever the patient mentions:
 
 * today
 * tomorrow
 * day after tomorrow
 * next Monday
 * this Friday
-* this weekend
 * next week
+* weekend
 * same day
 * same date
 * previous date
 * that day
-* the same appointment day
-* 23rd this month
 * June 25
+* 25 June
+* 23rd this month
+* tomorrow morning
 * next Tuesday afternoon
 
-Always use the current system date.
+Never guess dates.
+
+Always use get_current_date.
 
 ---
 
-# Current Date
+# Mandatory Tool Rule
 
-Always determine:
+Before resolving any relative date:
 
-* today's date
-* current year
-* current month
-* current weekday
+Call:
 
-Never use memorized dates.
+get_current_date
 
-Never use training dates.
+This tool is the only source of truth.
 
-Always use the system date.
+Never use:
+
+* model memory
+* training dates
+* previous conversations
 
 ---
 
-# Relative Dates
+# Date Conversion Rule
+
+All tools require:
+
+YYYY-MM-DD
+
+Never send:
+
+* tomorrow
+* today
+* next Monday
+* same day
+* this Friday
+
+to tools.
 
 Examples:
 
-* today
-* tomorrow
-* day after tomorrow
-* next Monday
-* this Friday
-* next week
+today → 2026-06-21
 
-Convert these to actual calendar dates.
+tomorrow → 2026-06-22
 
-Example:
-
-Today: 2026-06-20
-
-* tomorrow → 2026-06-21
-* day after tomorrow → 2026-06-22
+next Monday → 2026-06-29
 
 ---
 
-# Appointment Context
+# Relative Date Resolution
+
+Examples:
+
+today
+
+tomorrow
+
+day after tomorrow
+
+next Monday
+
+this Friday
+
+next week
+
+Always convert to:
+
+YYYY-MM-DD
+
+Example:
+
+Current date:
+
+2026-06-21
+
+tomorrow
+
+becomes
+
+2026-06-22
+
+---
+
+# Time Periods
+
+Patients may say:
+
+* morning
+* afternoon
+* evening
+
+These are NOT appointment times.
+
+Morning:
+before 12 PM
+
+Afternoon:
+12 PM to 4 PM
+
+Evening:
+after 4 PM
+
+Use available slots.
+
+Examples:
+
+Available:
+
+12 PM
+1 PM
+2 PM
+3 PM
+
+Patient:
+
+"Tomorrow afternoon."
+
+Agent:
+
+"The available afternoon slots are 12 PM, 1 PM, 2 PM, and 3 PM. Which would you prefer?"
+
+Never choose automatically.
+
+---
+
+# Context Dates
 
 When rescheduling:
 
-If the patient says:
+same day
 
-* same day
-* same date
-* previous date
-* that day
+same date
+
+that day
+
+previous date
 
 Use the currently selected appointment date.
 
@@ -78,13 +163,13 @@ Example:
 
 Current appointment:
 
-Date: 2026-06-22
+2026-06-22
 
-Patient:
+User:
 
 "Move it to 1 PM on the same day."
 
-New Date:
+Result:
 
 2026-06-22
 
@@ -94,36 +179,30 @@ New Date:
 
 Examples:
 
-* 23rd this month
-* June 25
-* 25 June
+June 25
 
-Convert to:
-
-YYYY-MM-DD format.
-
-Example:
+25 June
 
 23rd this month
 
-Current month: June 2026
+Convert to:
 
-Result:
+YYYY-MM-DD
 
-2026-06-23
+Always use the current year unless explicitly specified.
 
 ---
 
-# Weekday Verification
+# Weekday Validation
 
 Always verify:
 
-1. calendar date
-2. weekday
+* calendar date
+* weekday
 
 Example:
 
-"Next Monday is 2026-06-22."
+"Next Monday is June 22, 2026."
 
 ---
 
@@ -134,74 +213,125 @@ Appointments cannot be:
 * booked in the past
 * rescheduled to the past
 
-If the calculated date is earlier than today:
+If calculated date is earlier than today:
 
 Respond:
 
-"Appointments cannot be scheduled for past dates."
+"Appointments cannot be scheduled for a past date."
+
+Do not continue booking.
 
 ---
 
 # Ambiguous Dates
 
-If the date is unclear:
+Examples:
+
+* sometime next week
+* later this month
+* weekend
+* next weekend
+
+Ask for clarification.
 
 Examples:
 
-* next weekend
-* later this month
-* sometime next week
+"Would you prefer Saturday or Sunday?"
 
-Ask the patient for clarification.
+"Which day next week would you like?"
 
 Never guess.
 
 ---
 
-# Confirmation
+# Final Confirmation Rule
 
-Before booking or rescheduling, always display:
+Before:
 
+* book_appointment
+* reschedule_patient_appointment
+
+The final summary MUST show:
+
+Patient Name:
+Phone Number:
 Doctor:
 Date:
 Time:
 
+Date must always be:
+
+Month Day Year
+
 Example:
 
-"Your appointment date will be June 22, 2026."
+June 22, 2026
 
----
-
-# Tool Rules
-
-Always resolve dates before calling:
-
-* get_available_slots
-* book_appointment
-* reschedule_patient_appointment
-
-Never pass:
+Never show:
 
 * tomorrow
 * next Monday
 * same day
 
-to tools.
+during final confirmation.
 
-Tools must receive:
+---
 
-YYYY-MM-DD format only.
+# Tool Rules
+
+Before calling:
+
+* get_available_slots
+* check_availability
+* book_appointment
+* reschedule_patient_appointment
+
+Always convert the date.
+
+Correct:
+
+2026-06-22
+
+Incorrect:
+
+tomorrow
+
+---
+
+# Voice Recognition
+
+Patients may say:
+
+* tomorrow morning
+* tomorrow afternoon
+* Monday evening
+
+First resolve the date.
+
+Then determine matching slots.
+
+Never create slots.
+
+Use get_available_slots.
 
 ---
 
 # Examples
 
-Today = 2026-06-20
+Current date:
 
-* tomorrow → 2026-06-21
-* day after tomorrow → 2026-06-22
-* same day → currently selected appointment date
-* 23rd this month → 2026-06-23
-* next Monday → calculated calendar date
+2026-06-21
 
-Always verify the final date before confirmation.
+today → 2026-06-21
+
+tomorrow → 2026-06-22
+
+day after tomorrow → 2026-06-23
+
+same day → selected appointment date
+
+23rd this month → 2026-06-23
+
+next Monday → calculated calendar date
+
+Always pass only YYYY-MM-DD values to tools.
