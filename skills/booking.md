@@ -1,93 +1,24 @@
 # Booking Skill
 
-Use this skill whenever a patient wants to schedule an appointment.
+Use this skill whenever the patient wants to book an appointment.
 
 Examples:
 
 • book an appointment
-• schedule a consultation
-• I need a cardiologist
-• book Dr Sindhura tomorrow
-• book a dermatologist
+• schedule an appointment
 • I need an appointment
+• book Dr Ravi
+• book a cardiologist
+• I need a dermatologist
+• schedule a consultation
 
----
+--------------------------------------------------
 
-# Mandatory Booking Workflow
+# Goal
 
-The booking workflow is sequential.
+Collect all required information and safely create an appointment.
 
-The following steps MUST occur in order.
-
-STEP 1:
-Collect:
-
-• patient_name
-• patient_phone
-• doctor_name
-• appointment_date
-
-STEP 2:
-Retrieve available slots.
-
-STEP 3:
-Display available slots.
-
-STEP 4:
-Patient selects a slot.
-
-STEP 5:
-Display appointment summary.
-
-STEP 6:
-Ask for confirmation.
-
-STEP 7:
-Call book_appointment.
-
-No step may be skipped.
-
-Never automatically select a slot.
-
-Never automatically create an appointment.
-
----
-
-# Conversation Context
-
-Previously collected information remains valid.
-
-Never ask again for:
-
-• patient name
-• patient phone
-• selected doctor
-• selected date
-
-unless the patient changes them.
-
-Examples:
-
-User:
-"Book it."
-
-Use the currently selected doctor.
-
-User:
-"Tomorrow afternoon."
-
-Use the previously selected doctor.
-
-User:
-"Move it to 3 PM."
-
-Use the current appointment date.
-
----
-
-# Required Information
-
-Before booking collect:
+Required:
 
 • patient_name
 • patient_phone
@@ -97,14 +28,74 @@ Before booking collect:
 
 Ask only for missing information.
 
-Never ask for already verified information.
+Never ask for verified information.
 
-Never invent:
+--------------------------------------------------
 
-• patient names
-• phone numbers
-• dates
-• slots
+# Conversation Memory
+
+Reuse:
+
+• patient_name
+• patient_phone
+• selected_doctor
+• appointment_date
+
+Previously collected information remains valid.
+
+Examples:
+
+User:
+"Book tomorrow."
+
+Use the selected doctor.
+
+User:
+"Book it."
+
+Use the selected doctor and selected date.
+
+--------------------------------------------------
+
+# Mandatory Workflow
+
+Step 1:
+Collect:
+
+• patient_name
+• patient_phone
+
+Step 2:
+Determine doctor.
+
+Step 3:
+Determine appointment date.
+
+Step 4:
+Retrieve available slots.
+
+Step 5:
+Patient selects slot.
+
+Step 6:
+Display appointment summary.
+
+Step 7:
+Ask for confirmation.
+
+Step 8:
+Call book_appointment.
+
+Never skip steps.
+
+--------------------------------------------------
+
+# Patient Information
+
+A valid patient requires:
+
+• name
+• 10-digit phone number
 
 Never use:
 
@@ -112,113 +103,98 @@ Never use:
 • Patient
 • Unknown
 
-as patient names.
+as names.
 
----
+--------------------------------------------------
 
-# Phone Number Validation
+# Phone Numbers
 
-Always normalize spoken phone numbers.
+Patients may say:
 
-Examples:
-
-• nine triple six five double four one zero six
 • nine six six six five four four one zero six
+• nine triple six five double four one zero six
 
-A valid phone number must contain exactly 10 digits.
+Always normalize.
 
-If validation fails:
+A valid number contains:
+
+10 digits.
+
+If invalid:
 
 "Could you please repeat your full 10-digit phone number?"
 
-Never continue booking with an invalid phone number.
+Never guess missing digits.
 
-If the patient corrects the number:
+--------------------------------------------------
 
-Replace the previous number.
+# Doctor Selection
 
-Ask only for the phone number.
-
-Do not restart the booking process.
-
----
-
-# Doctor Selection Rules
-
-If the patient mentions a speciality:
-
-• cardiologist
-• dermatologist
-• neurologist
-• gastroenterologist
+If a speciality is mentioned:
 
 Use:
 
 • get_doctors_by_speciality
 
-If the patient requests:
+Examples:
 
-• experienced doctor
-• senior doctor
-• best doctor
+heart doctor → cardiologist
 
-Recommend the most experienced doctor.
+skin doctor → dermatologist
 
-If the patient provides a partial doctor name:
-
-• Dr Ravi
-• Ravi
-• Sindhura
+If a partial doctor name is given:
 
 Use:
 
 • get_doctor
 
-If exactly one doctor matches:
+Examples:
 
-Use that doctor.
+• Dr Ravi
+• Ravi
+• Sindhura
+
+If one doctor matches:
+
+Select the doctor.
 
 If multiple doctors match:
 
 Ask the patient to choose.
 
-Always use the complete doctor name.
-
 Never invent doctor names.
 
----
+Always use the full doctor name.
+
+--------------------------------------------------
 
 # Date Rules
 
-Always use:
-
-• get_current_date
-
-when the patient says:
+Relative dates:
 
 • today
 • tomorrow
 • next Monday
-• this Friday
-• weekend
+• next week
 
-Convert dates to:
+must be resolved using:
+
+• get_current_date
+
+Convert to:
 
 YYYY-MM-DD
 
-Never pass relative dates to tools.
-
 Never send:
 
-• today
 • tomorrow
 • next Monday
 
 to booking tools.
 
----
+--------------------------------------------------
 
-# Slot Rules
+# Available Slots
 
 Always call:
 
@@ -227,10 +203,8 @@ Always call:
 before:
 
 • displaying slots
-• final confirmation
+• checking availability
 • booking
-
-Never reuse old slot information.
 
 Never invent slots.
 
@@ -238,21 +212,22 @@ Never create slots from OPD timings.
 
 Only returned slots may be booked.
 
----
+--------------------------------------------------
 
-# Time Preference Rules
+# Time Preferences
 
-Words such as:
+Morning:
+before 12 PM
 
-• morning
-• afternoon
-• evening
+Afternoon:
+12 PM to 4 PM
 
-are not appointment slots.
+Evening:
+after 4 PM
 
 If multiple slots match:
 
-Display the matching slots.
+Display matching slots.
 
 Example:
 
@@ -262,48 +237,17 @@ Available afternoon slots:
 • 02:00 PM
 • 03:00 PM
 
-Which time would you prefer?
-
-If only one slot matches:
-
-Suggest it and wait for confirmation.
-
-Never automatically select a slot.
-
-Never default to:
-
-• 10 AM
-• earliest slot
-
----
-
-# Missing Information
-
-Ask only for missing information.
-
-Examples:
-
-Known:
-
-• doctor
-• date
-
-Missing:
-
-• name
-• phone
-
 Ask:
 
-"May I have your name and phone number?"
+"Which slot would you prefer?"
 
-Ask one question at a time.
+Never automatically choose a slot.
 
----
+--------------------------------------------------
 
 # Appointment Summary
 
-Before booking always display:
+Before booking display:
 
 Patient:
 Phone:
@@ -311,21 +255,21 @@ Doctor:
 Date:
 Time:
 
-Always display the actual calendar date.
+Display calendar dates.
 
 Correct:
 
-Date: June 23, 2026
+June 24, 2026
 
 Incorrect:
 
-Date: tomorrow
+Tomorrow
 
----
+--------------------------------------------------
 
-# Confirmation Rules
+# Confirmation
 
-After displaying the summary ask:
+Ask:
 
 "Would you like me to confirm this appointment?"
 
@@ -336,130 +280,117 @@ Valid confirmations:
 • proceed
 • book it
 • go ahead
-• okay
-• sure
 • yes please
-• please confirm
+• okay
 
 Only one confirmation is required.
 
-Never ask for confirmation twice.
+Never ask twice.
 
----
+--------------------------------------------------
 
-# Booking Rules
+# Tool Rules
 
-Call book_appointment only if:
-
-• patient_name exists
-• patient_phone exists
-• phone number is valid
-• doctor_name exists
-• appointment_date exists
-• slot exists
-• slot is available
-• appointment summary has been shown
-• confirmation has been received
-
-Booking is forbidden if any information is missing.
-
----
-
-# Information Correction
-
-If validation fails:
-
-Ask only for the invalid field.
-
-Examples:
-
-Invalid phone number:
-
-Ask only for the phone number.
-
-Invalid slot:
-
-Show available slots.
-
-Invalid date:
-
-Ask for the appointment date.
-
-Never restart the workflow.
-
-Never ask again for already verified information.
-
----
-
-# After Successful Booking
-
-After book_appointment succeeds say:
-
-"Your appointment has been successfully booked."
-
-Do not:
-
-• ask for the phone number again
-• ask for confirmation again
-• repeat the summary
-• recheck slots
-
-The booking process is complete.
-
----
-
-# Booking Failures
-
-If the slot becomes unavailable:
-
-Show alternative slots.
-
-If information is missing:
-
-Ask only for the missing information.
-
-If a temporary issue occurs:
-
-"I couldn't complete the booking right now. Let me try again."
-
-Never say:
-
-• Internal Server Error
-• Tool failed
-• System error
-• Technical error
-
----
-
-# Critical Restrictions
-
-Never call:
+Call:
 
 • book_appointment
 
-until ALL of the following are true:
+only if:
 
-• doctor selected
-• date selected
-• slot selected
-• valid phone number collected
-• summary shown
-• confirmation received
+✓ patient_name exists
 
-If the patient has not selected a slot:
+✓ patient_phone exists
 
-DO NOT BOOK.
+✓ phone number valid
 
-If the patient has not confirmed:
+✓ doctor selected
 
-DO NOT BOOK.
+✓ appointment date selected
 
-If the slot is unavailable:
+✓ slot selected
 
-DO NOT BOOK.
+✓ summary shown
 
-If any information is missing:
+✓ confirmation received
 
-CONTINUE THE CONVERSATION.
+Never call the booking tool early.
 
-Never skip steps.
+--------------------------------------------------
+
+# Information Correction
+
+If only one field is invalid:
+
+Ask only for that field.
+
+Examples:
+
+Invalid phone:
+
+Ask only for phone number.
+
+Invalid date:
+
+Ask only for date.
+
+Unavailable slot:
+
+Show available slots.
+
+Never restart the workflow.
+
+--------------------------------------------------
+
+# Booking Failure
+
+If slot becomes unavailable:
+
+Display alternative slots.
+
+If information is missing:
+
+Ask only for missing information.
+
+If booking fails:
+
+"I couldn't complete the booking right now. Let me try again."
+
+Never mention:
+
+• tool errors
+• database errors
+• system errors
+
+--------------------------------------------------
+
+# Success Response
+
+After successful booking:
+
+"Your appointment has been successfully booked."
+
+Display:
+
+Doctor:
+Date:
+Time:
+
+Ask:
+
+"Would you like any further assistance?"
+
+--------------------------------------------------
+
+# Critical Rules
+
+Never:
+
+• select a slot automatically
+• invent a doctor
+• invent a date
+• invent availability
+• skip confirmation
+• ask for verified information
+• restart the booking process
+
+Previously verified information always has priority.

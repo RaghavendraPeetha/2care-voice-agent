@@ -1,8 +1,7 @@
 from langchain_core.tools import tool
 
 from app.database import SessionLocal
-from app.models import Doctor
-from app.models import Appointment
+from app.models import Doctor, Appointment
 
 from datetime import date, datetime, timedelta
 
@@ -10,28 +9,38 @@ from sqlalchemy import func
 
 import re
 
+
+# ============================================================
+# STANDARD RESPONSE HELPERS
+# ============================================================
+
+def success(message: str, data=None):
+    return {
+        "status": "success",
+        "message": message,
+        "data": data
+    }
+
+
+def failure(message: str):
+    return {
+        "status": "failed",
+        "message": message
+    }
+
+
+# ============================================================
+# PHONE NORMALIZATION
+# ============================================================
+
 @tool
 def normalize_phone_number(phone: str):
     """
     Convert spoken phone numbers into digits.
-
-    Examples:
-
-    one two three four
-    -> 1234
-
-    double four
-    -> 44
-
-    triple six
-    -> 666
-
-    nine triple six five double four one zero six
-    -> 9666544106
     """
 
     if not phone:
-        return ""
+        return failure("phone number required")
 
     phone = phone.lower()
 
@@ -74,7 +83,7 @@ def normalize_phone_number(phone: str):
             digit = words.get(tokens[i + 1])
 
             if digit:
-                result.extend([digit, digit, digit])
+                result.extend([digit] * 3)
 
             i += 2
             continue
@@ -87,46 +96,44 @@ def normalize_phone_number(phone: str):
 
         i += 1
 
-    return "".join(result)
+    normalized = "".join(result)
+
+    if len(normalized) != 10:
+        return failure(
+            "phone number must contain exactly 10 digits"
+        )
+
+    return success(
+        "phone number normalized",
+        {
+            "phone": normalized
+        }
+    )
+
 
 @tool
 def get_current_date():
     """
-    Returns today's date and tomorrow's date.
-
-    Always use this tool when the patient says:
-    - today
-    - tomorrow
-    - next week
-    - next Monday
-
-    Never guess dates.
+    Returns today's and tomorrow's dates.
     """
 
     today = date.today()
 
     tomorrow = today + timedelta(days=1)
 
-    return {
-        "today": today.strftime("%Y-%m-%d"),
-        "tomorrow": tomorrow.strftime("%Y-%m-%d")
-    }
+    return success(
+        "current date retrieved",
+        {
+            "today": today.strftime("%Y-%m-%d"),
+            "tomorrow": tomorrow.strftime("%Y-%m-%d")
+        }
+    )
+
 
 @tool
 def get_doctors():
     """
-    Retrieve all doctors available in the clinic.
-
-    Use this tool when the patient asks:
-    - Which doctors are available?
-    - Who is the cardiologist?
-    - Which departments exist?
-    - Who is a dermatologist?
-    - Which specialists are available?
-
-    This tool is informational only.
-
-    Never use this tool to create, update, or cancel appointments.
+    Retrieve all doctors.
     """
 
     db = SessionLocal()
@@ -135,8 +142,13 @@ def get_doctors():
 
         doctors = db.query(Doctor).all()
 
-        return [
-            {
+        if not doctors:
+            return failure("no doctors found")
+
+        data = []
+
+        for d in doctors:
+            data.append({
                 "name": d.name,
                 "speciality": d.speciality,
                 "experience": d.experience,
@@ -145,31 +157,26 @@ def get_doctors():
                 "services": d.services,
                 "location": d.location,
                 "hospital": d.hospital
-            }
-            for d in doctors
-        ]
+            })
+
+        return success(
+            "doctors retrieved",
+            data
+        )
 
     finally:
         db.close()
 
+
+
 @tool
 def get_doctors_by_speciality(speciality: str):
     """
-    Retrieve doctors belonging to a medical speciality.
-
-    Examples:
-    - cardiologist
-    - dermatologist
-    - neurologist
-    - gastroenterologist
-
-    Always use this tool when the patient asks:
-    - I need a cardiologist
-    - Show dermatologists
-    - Which neurologists are available
-
-    Never search manually through all doctors.
+    Retrieve doctors by speciality.
     """
+
+    if not speciality:
+        return failure("speciality required")
 
     db = SessionLocal()
 
@@ -188,51 +195,43 @@ def get_doctors_by_speciality(speciality: str):
         )
 
         if not doctors:
-            return []
+            return failure(
+                "no doctors found for this speciality"
+            )
 
-        return [
-            {
+        data = []
+
+        for d in doctors:
+            data.append({
                 "name": d.name,
                 "speciality": d.speciality,
                 "experience": d.experience,
+                "languages": d.languages,
                 "timings": d.opd_timings
-            }
-            for d in doctors
-        ]
+            })
+
+        return success(
+            "doctors found",
+            data
+        )
 
     finally:
         db.close()
 
+
 @tool
 def get_doctor(doctor_name: str):
     """
-    Retrieve a doctor using a partial or full doctor name.
-
-    Use this tool whenever the patient mentions:
-
-    - Dr Sindhura
-    - Dr Ravi
-    - Sindhura
-    - Ravi Kumar
-
-    This tool helps identify the correct doctor record.
-
-    IMPORTANT:
-
-    - Always use this tool before booking if the doctor name is incomplete.
-    - If exactly one doctor matches, use the full doctor name.
-    - If multiple doctors match, ask the patient to choose.
-    - The returned doctor name becomes the official doctor name for the conversation.
-
-    Never invent doctor names.
-
-    Never shorten doctor names.
-
-    The database doctor record is the source of truth.
+    Search doctor using partial or full name.
     """
+
+    if not doctor_name:
+        return failure("doctor name required")
+
     db = SessionLocal()
 
     try:
+
         search_name = (
             doctor_name
             .replace("Dr.", "")
@@ -240,25 +239,38 @@ def get_doctor(doctor_name: str):
             .strip()
         )
 
-        doctors = db.query(Doctor).filter(
-            Doctor.name.ilike(f"%{search_name}%")
-        ).all()
+        doctors = (
+            db.query(Doctor)
+            .filter(
+                Doctor.name.ilike(
+                    f"%{search_name}%"
+                )
+            )
+            .all()
+        )
 
         if not doctors:
-            return []
+            return failure("doctor not found")
 
-        return [
-            {
+        data = []
+
+        for d in doctors:
+            data.append({
                 "name": d.name,
                 "speciality": d.speciality,
                 "experience": d.experience,
+                "languages": d.languages,
                 "timings": d.opd_timings
-            }
-            for d in doctors
-        ]
-    
+            })
+
+        return success(
+            "doctor found",
+            data
+        )
+
     finally:
         db.close()
+
 
 @tool
 def get_patient_appointments(
@@ -266,70 +278,36 @@ def get_patient_appointments(
     patient_name: str
 ):
     """
-    Retrieve ACTIVE appointments belonging to a verified patient.
-
-    SECURITY RULES:
-
-    This tool requires BOTH:
-
-    - patient_name
-    - patient_phone
-
-    Never call this tool unless both values have
-    been collected.
-
-    Use this tool when the patient asks:
-
-    - show my appointments
-    - what appointments do I have
-    - do I have any bookings
-    - list my appointments
-    - cancel my appointment
-    - reschedule my appointment
-
-    Never reveal another patient's appointments.
-
-    Never use only the patient name.
-
-    Never use only the phone number.
-
-    Patient verification is mandatory.
-
-    This tool returns only ACTIVE appointments.
-
-    Returned statuses:
-
-    - BOOKED
-
-    Cancelled, completed, and no-show appointments
-    are excluded.
+    Retrieve active appointments belonging to a verified patient.
+    Only BOOKED appointments are returned.
     """
+
+    if not patient_name:
+        return failure("patient name required")
+
+    if not patient_phone:
+        return failure("phone number required")
+
+    phone_result = normalize_phone_number.invoke(
+        {"phone": patient_phone}
+    )
+
+    if phone_result["status"] == "failed":
+        return phone_result
+
+    patient_phone = phone_result["data"]["phone"]
+
+    normalized_name = patient_name.strip().title()
+
     db = SessionLocal()
 
     try:
-        patient_name = patient_name.strip().title()
-
-        patient_phone = normalize_phone_number.invoke(
-            {"phone": patient_phone}
-        )
-
-        if not patient_name:
-            return {
-                "status": "failed",
-                "message": "patient name required"
-            }
-
-        if not patient_phone:
-            return {
-                "status": "failed",
-                "message": "phone number required"
-            }
 
         appointments = (
             db.query(Appointment)
             .filter(
                 func.lower(Appointment.patient_name)
-                == patient_name.lower(),
+                == normalized_name.lower(),
                 Appointment.patient_phone == patient_phone,
                 Appointment.status == "BOOKED"
             )
@@ -341,24 +319,28 @@ def get_patient_appointments(
         )
 
         if not appointments:
-            return {
-                "status": "failed",
-                "message": "no active appointments found"
-            }
+            return failure(
+                "no active appointments found"
+            )
 
-        return [
-            {
-                "appointment_id": a.id,
+        data = []
+
+        for a in appointments:
+            data.append({
                 "doctor": a.doctor_name,
                 "date": a.appointment_date,
                 "slot": a.slot,
                 "status": a.status
-            }
-            for a in appointments
-        ]
+            })
+
+        return success(
+            "appointments found",
+            data
+        )
 
     finally:
         db.close()
+
 
 @tool
 def get_appointment_history(
@@ -366,31 +348,39 @@ def get_appointment_history(
     patient_name: str
 ):
     """
-    Retrieve all appointments belonging to a verified patient.
-
-    Includes:
-
-    - BOOKED
-    - CANCELLED
-    - COMPLETED
-    - NO_SHOW
+    Retrieve all appointments including:
+    BOOKED
+    CANCELLED
+    COMPLETED
+    NO_SHOW
     """
+
+    if not patient_name:
+        return failure("patient name required")
+
+    if not patient_phone:
+        return failure("phone number required")
+
+    phone_result = normalize_phone_number.invoke(
+        {"phone": patient_phone}
+    )
+
+    if phone_result["status"] == "failed":
+        return phone_result
+
+    patient_phone = phone_result["data"]["phone"]
+
+    normalized_name = patient_name.strip().title()
 
     db = SessionLocal()
 
     try:
 
-        patient_name = patient_name.strip().title()
-
-        patient_phone = normalize_phone_number.invoke(
-            {"phone": patient_phone}
-        )
-
         appointments = (
             db.query(Appointment)
             .filter(
                 func.lower(Appointment.patient_name)
-                == patient_name.lower(),
+                == normalized_name.lower(),
                 Appointment.patient_phone == patient_phone
             )
             .order_by(
@@ -401,24 +391,28 @@ def get_appointment_history(
         )
 
         if not appointments:
-            return {
-                "status": "failed",
-                "message": "no appointment history found"
-            }
+            return failure(
+                "no appointment history found"
+            )
 
-        return [
-            {
-                "appointment_id": a.id,
+        data = []
+
+        for a in appointments:
+            data.append({
                 "doctor": a.doctor_name,
                 "date": a.appointment_date,
                 "slot": a.slot,
                 "status": a.status
-            }
-            for a in appointments
-        ]
+            })
+
+        return success(
+            "appointment history found",
+            data
+        )
 
     finally:
         db.close()
+
 
 @tool
 def get_available_slots(
@@ -426,23 +420,29 @@ def get_available_slots(
     appointment_date: str
 ):
     """
-    Retrieve the currently available appointment slots.
-
-    IMPORTANT:
-
-    - Always call this tool before booking.
-    - Always call this tool before rescheduling.
-    - Always call this tool before displaying available slots.
-    - Never reuse previously displayed slots.
-    - Never create slots from OPD timings.
-    - Only returned slots may be booked.
-
-    The returned slots are the source of truth.
+    Retrieve available appointment slots.
     """
+
+    if not doctor_name:
+        return failure("doctor name required")
+
+    if not appointment_date:
+        return failure("appointment date required")
+
+    try:
+        datetime.strptime(
+            appointment_date,
+            "%Y-%m-%d"
+        )
+    except ValueError:
+        return failure(
+            "invalid appointment date"
+        )
 
     db = SessionLocal()
 
     try:
+
         search_name = (
             doctor_name
             .replace("Dr.", "")
@@ -450,19 +450,20 @@ def get_available_slots(
             .strip()
         )
 
-        doctor = db.query(Doctor).filter(
-            Doctor.name.ilike(f"%{search_name}%")
-        ).first()
+        doctor = (
+            db.query(Doctor)
+            .filter(
+                Doctor.name.ilike(
+                    f"%{search_name}%"
+                )
+            )
+            .first()
+        )
 
         if not doctor:
-            return []
+            return failure("doctor not found")
 
         timing = doctor.opd_timings
-
-        # Example:
-        # MON – SAT : 11:00 AM – 03:00 PM
-
-        import re
 
         match = re.search(
             r'(\d{1,2}:\d{2}\s*[AP]M).*?(\d{1,2}:\d{2}\s*[AP]M)',
@@ -470,7 +471,9 @@ def get_available_slots(
         )
 
         if not match:
-            return []
+            return failure(
+                "unable to determine doctor timings"
+            )
 
         start_time = datetime.strptime(
             match.group(1),
@@ -494,13 +497,19 @@ def get_available_slots(
 
             current += timedelta(hours=1)
 
-        booked = db.query(Appointment).filter(
-            Appointment.doctor_name == doctor.name,
-            Appointment.appointment_date == appointment_date,
-            Appointment.status == "BOOKED"
-        ).all()
+        booked = (
+            db.query(Appointment)
+            .filter(
+                Appointment.doctor_name == doctor.name,
+                Appointment.appointment_date == appointment_date,
+                Appointment.status == "BOOKED"
+            )
+            .all()
+        )
 
-        booked_slots = [a.slot for a in booked]
+        booked_slots = [
+            a.slot for a in booked
+        ]
 
         available = [
             slot
@@ -508,10 +517,19 @@ def get_available_slots(
             if slot not in booked_slots
         ]
 
-        return available
+        if not available:
+            return failure(
+                "no slots available"
+            )
+
+        return success(
+            "available slots retrieved",
+            available
+        )
 
     finally:
         db.close()
+
 
 @tool
 def check_availability(
@@ -520,169 +538,91 @@ def check_availability(
     slot: str
 ):
     """
-    Check whether a doctor's appointment slot is available.
-
-    Use this tool before booking appointments.
-
-    IMPORTANT:
-
-    - This tool does not create appointments.
-    - This tool only checks availability.
-    - If the slot is unavailable, suggest alternatives.
-    - Never promise unavailable slots.
-
-    This tool may be called before the patient confirms the booking.
-
-    Return availability information to the patient.
+    Check whether a slot is available.
     """
 
-    db = SessionLocal()
+    if not slot:
+        return failure("slot required")
 
-    try:
-        available_slots = get_available_slots.invoke(
-            {
-                "doctor_name": doctor_name,
-                "appointment_date": appointment_date
-            }
-        )
+    slot = slot.strip().upper()
 
-        return slot in available_slots
+    slot_result = get_available_slots.invoke(
+        {
+            "doctor_name": doctor_name,
+            "appointment_date": appointment_date
+        }
+    )
 
-    finally:
-        db.close()
+    if slot_result["status"] == "failed":
+        return slot_result
+
+    available_slots = slot_result["data"]
+
+    return success(
+        "availability checked",
+        {
+            "available": slot in available_slots,
+            "requested_slot": slot,
+            "available_slots": available_slots
+        }
+    )
+
+
 
 @tool
 def book_appointment(
-patient_name: str,
-patient_phone: str,
-doctor_name: str,
-appointment_date: str,
-slot: str
+    patient_name: str,
+    patient_phone: str,
+    doctor_name: str,
+    appointment_date: str,
+    slot: str
 ):
     """
-    Create a hospital appointment.
+    Create a new appointment.
 
-    ```
-    CRITICAL RULES:
-
-    This tool MUST NOT be called immediately.
-
-    This tool may only be called AFTER ALL of the following information
-    has been collected:
-
-    - patient_name
-    - patient_phone
-    - doctor_name
-    - appointment_date
-    - slot
-
-    Before calling this tool, the agent MUST:
-
-    1. Show the appointment summary.
-
-    Patient Name:
-    Phone Number:
-    Doctor:
-    Date:
-    Time:
-
-    2. Ask:
-
-    "Would you like me to confirm this appointment?"
-
-    3. Wait for explicit confirmation.
-
-    Valid confirmations:
-
-    - Yes
-    - Confirm
-    - Proceed
-    - Book it
-    - Go ahead
-
-    Never invent:
-
-    - patient names
-    - phone numbers
-    - dates
-    - times
-
-    Never use:
-
-    - User
-    - Patient
-    - Unknown
-
-    If information is missing,
-    continue asking the patient.
-
-    If confirmation has not been received,
-    DO NOT call this tool.
+    This tool assumes the agent has already:
+    - collected all information
+    - shown appointment summary
+    - received confirmation
     """
 
-    patient_phone = normalize_phone_number.invoke(
-    {"phone": patient_phone}
+    if not patient_name:
+        return failure("patient name required")
+
+    if not patient_phone:
+        return failure("phone number required")
+
+    if not doctor_name:
+        return failure("doctor name required")
+
+    if not appointment_date:
+        return failure("appointment date required")
+
+    if not slot:
+        return failure("appointment slot required")
+
+    phone_result = normalize_phone_number.invoke(
+        {"phone": patient_phone}
     )
-    slot = slot.strip().upper()
 
-    required_fields = {
-        "patient_name": patient_name,
-        "patient_phone": patient_phone,
-        "doctor_name": doctor_name,
-        "appointment_date": appointment_date,
-        "slot": slot
-    }
+    if phone_result["status"] == "failed":
+        return phone_result
 
-    invalid_values = [
+    patient_phone = phone_result["data"]["phone"]
+
+    patient_name = patient_name.strip().title()
+
+    invalid_names = [
         "user",
         "patient",
-        "unknown",
-        "[your name]",
-        "[your phone number]",
-        ""
+        "unknown"
     ]
 
-    normalized_name = patient_name.strip().title()
+    if patient_name.lower() in invalid_names:
+        return failure("valid patient name required")
 
-    print("BOOK REQUEST")
-    print(normalized_name)
-    print(patient_phone)
-    print(doctor_name)
-    print(appointment_date)
-    print(slot)
+    slot = slot.strip().upper()
 
-    if normalized_name.lower() in invalid_values:
-        return {
-            "status": "failed",
-            "message": "valid patient name required"
-        }
-
-    if patient_phone.lower().strip() in invalid_values:
-        return {
-            "status": "failed",
-            "message": "valid phone number required"
-        }
-
-    missing = [
-        field
-        for field, value in required_fields.items()
-        if not value
-    ]
-
-    if missing:
-        return {
-            "status": "failed",
-            "message": f"Missing required fields: {', '.join(missing)}"
-        }
-
-    # Phone validation
-    if not patient_phone.isdigit() or len(patient_phone) != 10:
-        return {
-            "status": "failed",
-            "message": "phone number must contain 10 digits"
-        }
-
-    # Date validation
     try:
         appointment_dt = datetime.strptime(
             appointment_date,
@@ -690,40 +630,46 @@ slot: str
         ).date()
 
         if appointment_dt < date.today():
-            return {
-                "status": "failed",
-                "message": "cannot book appointments in the past"
-            }
+            return failure(
+                "appointments cannot be booked in the past"
+            )
 
     except ValueError:
-        return {
-            "status": "failed",
-            "message": "invalid appointment date"
-        }
+        return failure(
+            "invalid appointment date"
+        )
 
     db = SessionLocal()
 
     try:
 
-        doctor = db.query(Doctor).filter(
-            Doctor.name.ilike(
-                f"%{doctor_name.replace('Dr.', '').replace('Dr', '').strip()}%"
+        search_name = (
+            doctor_name
+            .replace("Dr.", "")
+            .replace("Dr", "")
+            .strip()
+        )
+
+        doctor = (
+            db.query(Doctor)
+            .filter(
+                Doctor.name.ilike(
+                    f"%{search_name}%"
+                )
             )
-        ).first()
+            .first()
+        )
 
         if not doctor:
-            return {
-                "status": "failed",
-                "message": "doctor not found"
-            }
+            return failure("doctor not found")
 
         doctor_name = doctor.name
 
-        # Prevent duplicate bookings
-        existing_patient_booking = (
+        duplicate = (
             db.query(Appointment)
             .filter(
-                Appointment.patient_name == normalized_name,
+                func.lower(Appointment.patient_name)
+                == patient_name.lower(),
                 Appointment.patient_phone == patient_phone,
                 Appointment.doctor_name == doctor_name,
                 Appointment.appointment_date == appointment_date,
@@ -733,29 +679,12 @@ slot: str
             .first()
         )
 
-        if existing_patient_booking:
-            return {
-                "status": "failed",
-                "message": "you already have this appointment booked"
-            }
+        if duplicate:
+            return failure(
+                "appointment already exists"
+            )
 
-        available_slots = get_available_slots.invoke(
-            {
-                "doctor_name": doctor_name,
-                "appointment_date": appointment_date
-            }
-        )
-
-        if slot not in available_slots:
-            return {
-                "status": "failed",
-                "message": (
-                    f"Invalid slot. Available slots: "
-                    f"{', '.join(available_slots)}"
-                )
-            }
-
-        available = check_availability.invoke(
+        availability = check_availability.invoke(
             {
                 "doctor_name": doctor_name,
                 "appointment_date": appointment_date,
@@ -763,14 +692,16 @@ slot: str
             }
         )
 
-        if not available:
-            return {
-                "status": "failed",
-                "message": "slot unavailable"
-            }
+        if availability["status"] == "failed":
+            return availability
+
+        if not availability["data"]["available"]:
+            return failure(
+                "requested slot is unavailable"
+            )
 
         appointment = Appointment(
-            patient_name=normalized_name,
+            patient_name=patient_name,
             patient_phone=patient_phone,
             doctor_name=doctor_name,
             appointment_date=appointment_date,
@@ -781,66 +712,60 @@ slot: str
         db.add(appointment)
         db.commit()
 
-        return {
-            "status": "success",
-            "message": "appointment booked"
-        }
+        return success(
+            "appointment booked successfully",
+            {
+                "patient": patient_name,
+                "doctor": doctor_name,
+                "date": appointment_date,
+                "slot": slot,
+                "status": "BOOKED"
+            }
+        )
 
     finally:
         db.close()
 
 
-       
 @tool
 def cancel_patient_appointment(
-patient_name: str,
-patient_phone: str,
-doctor_name: str,
-appointment_date: str,
-slot: str
+    patient_name: str,
+    patient_phone: str,
+    doctor_name: str,
+    appointment_date: str,
+    slot: str
 ):
     """
     Cancel exactly one appointment.
-
-    ```
-    Required:
-    - patient_name
-    - patient_phone
-    - doctor_name
-    - appointment_date
-    - slot
-
-    The patient must already be verified.
-
-    This tool only cancels one appointment.
-
-    Never use this tool until:
-    - patient identity is verified
-    - appointment is identified
-    - confirmation is received
-
-    Valid confirmations:
-    - yes
-    - confirm
-    - proceed
-    - cancel it
-
-    Never cancel multiple appointments with one call.
     """
-    db = SessionLocal()
 
-    patient_phone = normalize_phone_number.invoke(
+    if not patient_name:
+        return failure("patient name required")
+
+    if not patient_phone:
+        return failure("phone number required")
+
+    if not doctor_name:
+        return failure("doctor name required")
+
+    if not appointment_date:
+        return failure("appointment date required")
+
+    if not slot:
+        return failure("appointment slot required")
+
+    phone_result = normalize_phone_number.invoke(
         {"phone": patient_phone}
     )
 
-    normalized_name = patient_name.strip().title()
+    if phone_result["status"] == "failed":
+        return phone_result
 
-    print("CANCEL REQUEST")
-    print(normalized_name)
-    print(patient_phone)
-    print(doctor_name)
-    print(appointment_date)
-    print(slot)
+    patient_phone = phone_result["data"]["phone"]
+
+    patient_name = patient_name.strip().title()
+
+    db = SessionLocal()
 
     try:
 
@@ -848,155 +773,159 @@ slot: str
             db.query(Appointment)
             .filter(
                 func.lower(Appointment.patient_name)
-                == normalized_name.lower(),
+                == patient_name.lower(),
                 Appointment.patient_phone == patient_phone,
+                Appointment.doctor_name == doctor_name,
+                Appointment.appointment_date == appointment_date,
+                Appointment.slot == slot,
                 Appointment.status == "BOOKED"
-            )
-            .order_by(
-                Appointment.appointment_date
             )
             .first()
         )
 
         if not appointment:
-            return {
-                "status": "failed",
-                "message": "appointment not found"
-            }
+            return failure(
+                "appointment not found"
+            )
 
         appointment.status = "CANCELLED"
 
         db.commit()
 
-        return {
-            "status": "success",
-            "message": "appointment cancelled"
-        }
+        return success(
+            "appointment cancelled successfully",
+            {
+                "doctor": doctor_name,
+                "date": appointment_date,
+                "slot": slot,
+                "status": "CANCELLED"
+            }
+        )
 
     finally:
         db.close()
 
+
 @tool
 def reschedule_patient_appointment(
-patient_name: str,
-patient_phone: str,
-doctor_name: str,
-old_date: str,
-old_slot: str,
-new_date: str,
-new_slot: str
+    patient_name: str,
+    patient_phone: str,
+    doctor_name: str,
+    old_date: str,
+    old_slot: str,
+    new_date: str,
+    new_slot: str
 ):
     """
-    Reschedule exactly one verified appointment.
-
-    ```
-    Required:
-    - patient_name
-    - patient_phone
-    - doctor_name
-    - old_date
-    - old_slot
-    - new_date
-    - new_slot
-
-    The patient must already be verified.
-
-    Never use this tool without explicit confirmation.
-
-    This tool only reschedules one appointment.
+    Reschedule exactly one appointment.
     """
 
-    patient_phone = normalize_phone_number.invoke(
+    required = [
+        patient_name,
+        patient_phone,
+        doctor_name,
+        old_date,
+        old_slot,
+        new_date,
+        new_slot
+    ]
+
+    if not all(required):
+        return failure(
+            "all appointment details are required"
+        )
+
+    phone_result = normalize_phone_number.invoke(
         {"phone": patient_phone}
     )
+
+    if phone_result["status"] == "failed":
+        return phone_result
+
+    patient_phone = phone_result["data"]["phone"]
+
+    patient_name = patient_name.strip().title()
+
+    try:
+        new_dt = datetime.strptime(
+            new_date,
+            "%Y-%m-%d"
+        ).date()
+
+        if new_dt < date.today():
+            return failure(
+                "cannot reschedule to a past date"
+            )
+
+    except ValueError:
+        return failure(
+            "invalid new appointment date"
+        )
+
+    new_slot = new_slot.strip().upper()
 
     db = SessionLocal()
 
     try:
 
-        normalized_name = patient_name.strip().title()
-
-        print("RESCHEDULE REQUEST")
-        print(normalized_name)
-        print(patient_phone)
-        print(doctor_name)
-        print(old_date)
-        print(old_slot)
-
-        try:
-            new_dt = datetime.strptime(
-                new_date,
-                "%Y-%m-%d"
-            ).date()
-
-            if new_dt < date.today():
-                return {
-                    "status": "failed",
-                    "message": "cannot reschedule to a past date"
-                }
-
-        except ValueError:
-            return {
-                "status": "failed",
-                "message": "invalid date"
-            }
-
         appointment = (
             db.query(Appointment)
             .filter(
                 func.lower(Appointment.patient_name)
-                == normalized_name.lower(),
+                == patient_name.lower(),
                 Appointment.patient_phone == patient_phone,
+                Appointment.doctor_name == doctor_name,
+                Appointment.appointment_date == old_date,
+                Appointment.slot == old_slot,
                 Appointment.status == "BOOKED"
-            )
-            .order_by(
-                Appointment.appointment_date
             )
             .first()
         )
 
         if not appointment:
-            return {
-                "status": "failed",
-                "message": "appointment not found"
-            }
+            return failure(
+                "appointment not found"
+            )
 
         if (
             appointment.appointment_date == new_date
             and appointment.slot == new_slot
         ):
-            return {
-                "status": "failed",
-                "message": "appointment already scheduled at this time"
-            }
-
-        existing = (
-            db.query(Appointment)
-            .filter(
-                Appointment.id != appointment.id,
-                Appointment.doctor_name == appointment.doctor_name,
-                Appointment.appointment_date == new_date,
-                Appointment.slot == new_slot,
-                Appointment.status == "BOOKED"
+            return failure(
+                "appointment already scheduled at this time"
             )
-            .first()
+
+        availability = check_availability.invoke(
+            {
+                "doctor_name": doctor_name,
+                "appointment_date": new_date,
+                "slot": new_slot
+            }
         )
 
-        if existing:
-            return {
-                "status": "failed",
-                "message": "slot unavailable"
-            }
+        if availability["status"] == "failed":
+            return availability
+
+        if not availability["data"]["available"]:
+            return failure(
+                "requested slot unavailable"
+            )
 
         appointment.appointment_date = new_date
         appointment.slot = new_slot
 
         db.commit()
 
-        return {
-            "status": "success",
-            "message": "appointment rescheduled"
-        }
+        return success(
+            "appointment rescheduled successfully",
+            {
+                "doctor": doctor_name,
+                "old_date": old_date,
+                "old_slot": old_slot,
+                "new_date": new_date,
+                "new_slot": new_slot
+            }
+        )
 
     finally:
         db.close()

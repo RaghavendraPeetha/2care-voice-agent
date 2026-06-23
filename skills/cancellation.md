@@ -1,42 +1,32 @@
 # Cancellation Skill
 
-Use this skill whenever the patient wants to cancel appointments.
+Use this skill whenever the patient wants to cancel an appointment.
 
 Examples:
 
 • cancel my appointment
-• cancel booking
-• cancel tomorrow appointment
+• cancel my booking
+• cancel tomorrow's appointment
+• cancel that appointment
+• cancel it
 • cancel my latest appointment
-• cancel all appointments
-• cancel everything
-• cancel all bookings
+• cancel my cardiologist appointment
 
----
+--------------------------------------------------
 
-# Intent Preservation
+# Goal
 
-Determine the cancellation intent immediately.
+Identify exactly one appointment and cancel it safely.
 
-Possible intents:
+The cancellation workflow requires:
 
-• single appointment
-• specific appointment
-• latest appointment
-• tomorrow appointment
-• all appointments
+• patient verification
+• appointment selection
+• confirmation
 
-Never forget the original intent.
+Never cancel an unidentified appointment.
 
-Example:
-
-User:
-
-"Cancel all appointments."
-
-The agent must continue the bulk cancellation flow after verification.
-
----
+--------------------------------------------------
 
 # Patient Verification
 
@@ -45,11 +35,11 @@ Required:
 • patient_name
 • patient_phone
 
-If already verified during the current conversation:
+If the patient is already verified:
 
-DO NOT ask again.
+Do not ask again.
 
-The verified patient remains valid throughout the conversation.
+Previously verified information remains valid throughout the conversation.
 
 Ask only for missing information.
 
@@ -59,11 +49,41 @@ Examples:
 
 "May I have your name?"
 
----
+--------------------------------------------------
 
-# Previously Selected Appointment
+# Retrieve Appointments
 
-If an appointment was already retrieved during the current conversation:
+After verification call:
+
+• get_patient_appointments
+
+Only active appointments may be cancelled.
+
+Statuses that may be cancelled:
+
+• BOOKED
+
+Never cancel:
+
+• CANCELLED
+• COMPLETED
+• NO_SHOW
+
+--------------------------------------------------
+
+# No Active Appointments
+
+If no active appointments exist:
+
+"I couldn't find any active appointments associated with your information."
+
+Stop the workflow.
+
+--------------------------------------------------
+
+# Selected Appointment
+
+If an appointment was already selected during the conversation:
 
 Reuse:
 
@@ -84,29 +104,9 @@ User:
 
 Use the selected appointment.
 
-Do not search again.
-
 Do not ask again.
 
----
-
-# Appointment Lookup
-
-After verification:
-
-Call:
-
-• get_patient_appointments
-
-Retrieve active appointments.
-
-If none exist:
-
-"I couldn't find any active appointments."
-
-Stop the flow.
-
----
+--------------------------------------------------
 
 # Single Appointment
 
@@ -125,19 +125,40 @@ Ask:
 
 Wait for confirmation.
 
----
+--------------------------------------------------
 
-# Specific Appointment Requests
+# Multiple Appointments
+
+If multiple appointments exist:
+
+Display:
+
+1. Doctor — Date — Time
+2. Doctor — Date — Time
+
+Ask:
+
+"Which appointment would you like to cancel?"
+
+Never guess.
+
+Never select the first appointment automatically.
+
+--------------------------------------------------
+
+# Specific Requests
 
 Examples:
 
-• cancel tomorrow appointment
-• cancel the cardiologist appointment
+• cancel tomorrow's appointment
 • cancel the 3 PM appointment
+• cancel the cardiologist appointment
 
 If exactly one appointment matches:
 
-Display it.
+Select it.
+
+Display the appointment.
 
 Ask for confirmation.
 
@@ -145,11 +166,9 @@ If multiple appointments match:
 
 Display the matching appointments.
 
-Ask the patient which one.
+Ask the patient to choose.
 
-Never guess.
-
----
+--------------------------------------------------
 
 # Latest Appointment
 
@@ -162,78 +181,34 @@ Select the nearest future appointment.
 
 Display it.
 
+Ask for confirmation.
+
+--------------------------------------------------
+
+# Appointment Summary
+
+Before cancellation display:
+
+Patient:
+Doctor:
+Date:
+Time:
+
+Always display calendar dates.
+
+Correct:
+
+June 24, 2026
+
+Incorrect:
+
+Tomorrow
+
+--------------------------------------------------
+
+# Confirmation
+
 Ask:
-
-"Would you like me to cancel this appointment?"
-
----
-
-# Multiple Appointments
-
-If several appointments exist and the patient did not specify one:
-
-Display:
-
-1.
-2.
-3.
-
-Ask:
-
-"Which appointment would you like to cancel?"
-
-Never guess.
-
----
-
-# Bulk Cancellation
-
-Examples:
-
-• cancel all appointments
-• cancel everything
-• cancel all bookings
-
-Workflow:
-
-1. Verify patient.
-2. Retrieve appointments.
-3. Display appointments.
-4. Ask:
-
-"Would you like me to cancel all of these appointments?"
-
-Only after confirmation may cancellation occur.
-
-Never downgrade to single appointment cancellation.
-
----
-
-# Voice Recognition Rules
-
-Voice recognition may slightly change doctor names.
-
-Examples:
-
-• Damodhar Reddy Gouni
-• Damodar Reddy Gowni
-
-• Gopi Krishna Rayidi
-• Gopi Krishna Raidi
-
-If an appointment has already been retrieved:
-
-Use the appointment values.
-
-Never ask the patient to repeat the doctor's name.
-
-Previously selected appointments take priority over speech recognition.
-
----
-
-# Confirmation Rules
-
-Ask only once:
 
 "Would you like me to cancel this appointment?"
 
@@ -243,36 +218,14 @@ Valid confirmations:
 • confirm
 • proceed
 • cancel it
-• cancel them
 • go ahead
 • yes please
 
 Only one confirmation is required.
 
-Never ask:
+Never ask twice.
 
-• Are you sure?
-• Would you like me to confirm?
-• Shall I proceed?
-
-a second time.
-
----
-
-# Mandatory Cancellation Summary
-
-Before cancellation display:
-
-Patient:
-Doctor:
-Date:
-Time:
-
-Then ask:
-
-"Would you like me to cancel this appointment?"
-
----
+--------------------------------------------------
 
 # Tool Rules
 
@@ -280,15 +233,19 @@ Call:
 
 • cancel_patient_appointment
 
-only when:
+only if:
 
-• patient_name exists
-• patient_phone exists
-• doctor exists
-• appointment date exists
-• slot exists
-• appointment selected
-• confirmation received
+✓ patient verified
+
+✓ appointment selected
+
+✓ doctor exists
+
+✓ date exists
+
+✓ slot exists
+
+✓ confirmation received
 
 Required arguments:
 
@@ -300,41 +257,15 @@ Required arguments:
 
 Never guess values.
 
----
+Never reconstruct values from speech.
 
-# Tool Parameter Reliability
+Always use the selected appointment.
 
-The appointment selected from the database is the source of truth.
-
-The tool arguments should use:
-
-• selected doctor
-• selected date
-• selected slot
-
-Do not reconstruct values from speech.
-
-Do not ask the patient to repeat them.
-
----
-
-# Privacy Rules
-
-Never:
-
-• reveal another patient's appointments
-• search by name only
-• search by phone only
-• display all appointments
-• expose database information
-
-Patient verification is mandatory.
-
----
+--------------------------------------------------
 
 # Information Validation
 
-If the phone number is invalid:
+If phone number is invalid:
 
 Ask only for the phone number.
 
@@ -344,35 +275,48 @@ Do not ask again.
 
 If cancellation fails:
 
-Do not restart the workflow.
+Retry using the selected appointment.
 
-If the selected appointment exists:
+Never restart the workflow.
 
-Retry using the selected appointment values.
+--------------------------------------------------
 
----
+# Success Response
 
-# Cancellation Success
+After successful cancellation:
 
-After successful cancellation say:
-
-"Your appointment with Dr. ______ on June 22, 2026 at 3:00 PM has been successfully cancelled."
+"Your appointment with Dr. ______ on June 24, 2026 at 3:00 PM has been successfully cancelled."
 
 Ask:
 
 "Would you like any further assistance?"
 
----
+--------------------------------------------------
 
-# Critical Restrictions
+# Privacy Rules
+
+Never:
+
+• reveal other patient appointments
+• search by name only
+• search by phone only
+• expose internal IDs
+• expose database information
+
+Patient verification is mandatory.
+
+--------------------------------------------------
+
+# Critical Rules
 
 Never:
 
 • ask for verification twice
 • ask for confirmation twice
-• ask for the doctor name again
-• ask for the appointment date again
-• lose the selected appointment
-• restart the cancellation workflow
+• ask for doctor name again
+• ask for date again
+• cancel the first appointment automatically
+• cancel multiple appointments unintentionally
+• restart the workflow
 
 Previously selected appointments always have priority.

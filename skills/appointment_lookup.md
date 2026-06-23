@@ -5,32 +5,27 @@ Use this skill whenever the patient wants to view appointments.
 Examples:
 
 • show my appointments
-• list my appointments
 • do I have any appointments
+• list my bookings
 • show my bookings
 • upcoming appointments
 • appointment history
 • cancelled appointments
 • previous appointments
-• show all my appointments
+• old appointments
+• all my appointments
 
----
+--------------------------------------------------
 
-# Privacy Rule
+# Goal
 
-Appointments are private medical information.
+Allow patients to view only their own appointments.
 
-Never reveal:
+Patient verification is mandatory.
 
-• another patient's appointments
-• all appointments
-• database contents
-• appointment IDs
-• internal information
+Never reveal another patient's information.
 
-Patients may access only their own appointments.
-
----
+--------------------------------------------------
 
 # Patient Verification
 
@@ -45,80 +40,57 @@ Ask only for the missing information.
 
 Examples:
 
-Patient name known:
+Name available:
 
 "May I have your registered phone number?"
 
-Phone number known:
+Phone available:
 
 "May I have your name?"
 
----
+--------------------------------------------------
 
-# Conversation Memory Rule
+# Conversation Memory
 
-Once the patient has been verified during the current conversation:
+Once verified:
 
 • patient_name
 • patient_phone
 
-remain valid for the entire session.
+remain valid for the entire conversation.
 
 Do not ask again unless:
 
-• the patient changes identity
-• the patient provides another phone number
-• the patient requests another patient's information
+• identity changes
+• another patient is discussed
+• another phone number is provided
 
 Previously verified information has priority.
 
----
+--------------------------------------------------
 
-# Phone Number Rules
+# Phone Numbers
 
-Patients may provide phone numbers using speech.
+Patients may speak numbers.
 
 Examples:
 
 • nine six six six five four four one zero six
 • nine triple six five double four one zero six
-• double four
-• triple six
 
-Always normalize spoken numbers.
+Always normalize the phone number.
 
-If the result does not contain exactly 10 digits:
+A valid phone number must contain:
 
-Ask:
+10 digits.
+
+If invalid:
 
 "Could you please repeat your full 10-digit phone number?"
 
 Never guess missing digits.
 
-Never retrieve appointments using an invalid phone number.
-
----
-
-# Phone Number Confirmation
-
-After normalization:
-
-Repeat the number.
-
-Example:
-
-"I heard your phone number as 9 6 6 6 5 4 4 1 0 6. Is that correct?"
-
-The number becomes verified only after:
-
-• exactly 10 digits
-• patient confirmation
-
-If corrected:
-
-Replace the previous number.
-
----
+--------------------------------------------------
 
 # Active Appointments
 
@@ -129,31 +101,33 @@ For:
 • do I have appointments
 • my bookings
 
-Use:
+Call:
 
 • get_patient_appointments
 
-Only BOOKED appointments should be shown.
+Only display:
 
-Do not display:
+• BOOKED
+
+Never display:
 
 • CANCELLED
 • COMPLETED
 • NO_SHOW
 
----
+--------------------------------------------------
 
 # Appointment History
 
 For:
 
 • appointment history
-• cancelled appointments
 • previous appointments
+• cancelled appointments
 • old appointments
-• all my appointments
+• all appointments
 
-Use:
+Call:
 
 • get_appointment_history
 
@@ -164,9 +138,9 @@ Display:
 • COMPLETED
 • NO_SHOW
 
-Always show appointment status.
+Always display the status.
 
----
+--------------------------------------------------
 
 # No Appointments
 
@@ -176,11 +150,11 @@ If no active appointments exist:
 
 If no history exists:
 
-"I couldn't find any appointments associated with these details."
+"I couldn't find any appointments associated with your information."
 
-Stop the lookup.
+Stop the workflow.
 
----
+--------------------------------------------------
 
 # Single Appointment
 
@@ -196,33 +170,33 @@ Example:
 
 Patient: Raghavendra
 
-Doctor: Dr. Bharat Vijay Purohit
+Doctor: Dr Ravi Kumar
 
-Date: June 22, 2026
+Date: June 24, 2026
 
 Time: 03:00 PM
 
 Status: BOOKED
 
----
+--------------------------------------------------
 
 # Multiple Appointments
 
-Display all appointments.
+Display:
 
-Example:
+1. Doctor — Date — Time — Status
 
-1. Dr. Bharat Vijay Purohit — June 22, 2026 — 03:00 PM
+2. Doctor — Date — Time — Status
 
-2. Dr. Gopi Krishna Rayidi — June 28, 2026 — 11:00 AM
+Display all appointments belonging to the patient.
 
-Never display another patient's appointments.
+Never reveal another patient's information.
 
----
+--------------------------------------------------
 
 # Selected Appointment Memory
 
-When the patient chooses or discusses an appointment:
+When a patient selects an appointment:
 
 Remember:
 
@@ -242,11 +216,13 @@ User:
 User:
 "Move the second appointment."
 
-The selected appointment becomes the current appointment.
+The selected appointment becomes:
+
+selected_appointment
 
 Subsequent actions should reuse it.
 
----
+--------------------------------------------------
 
 # Final Date Display
 
@@ -260,141 +236,122 @@ Always display actual calendar dates.
 
 Correct:
 
-June 23, 2026
+June 24, 2026
 
 Incorrect:
 
 Tomorrow
 
----
+--------------------------------------------------
 
 # Administrative Requests
 
-If the patient says:
+Examples:
 
 • show all appointments
-• list every booking
 • show hospital appointments
+• show every booking
 
 Respond:
 
 "For privacy reasons, I can only access your own appointments."
 
-Ask for:
+Request:
 
 • patient_name
 • patient_phone
 
----
-
-# Voice Recognition Rules
-
-Doctor names may vary slightly.
-
-Examples:
-
-• Gopi Krishna Rayidi
-• Gopi Krishna Raidi
-
-• Damodhar Reddy Gouni
-• Damodar Reddy Gowni
-
-Previously retrieved appointments are more reliable than repeated speech recognition.
-
-Reuse selected appointments whenever possible.
-
----
+--------------------------------------------------
 
 # Information Validation
 
-Information is not considered verified until validated.
+Appointments are private.
 
-This applies to:
-
-• phone numbers
-
-If validation fails:
-
-Ask only for the invalid information.
-
-Never restart the workflow.
-
-Do not ask again for already verified information.
-
----
-
-# Security Rules
-
-Never search by:
+Never search using:
 
 • patient name only
 • phone number only
 
 Both values are required.
 
-Never expose:
+If the phone number is invalid:
 
-• SQL
-• database tables
-• internal IDs
-• schemas
+Ask only for the phone number.
 
----
+Never restart the workflow.
+
+--------------------------------------------------
 
 # Tool Rules
 
-Never call:
+Call:
 
 • get_patient_appointments
+
+for active appointments.
+
+Call:
+
 • get_appointment_history
 
-until:
+for historical requests.
 
-• patient_name exists
-• patient_phone exists
+Never call either tool until:
 
-If both already exist:
+✓ patient_name exists
 
-Call the tool immediately.
+✓ patient_phone exists
 
-Do not ask for verification again.
+--------------------------------------------------
 
----
+# Transition to Other Skills
 
-# Booking Transition
+After displaying appointments:
 
-If no appointments exist:
+Ask:
 
-The patient may continue.
+"Would you like help with cancelling or rescheduling any of these appointments?"
 
-Example:
+The selected appointment remains available.
 
-"I don't currently see any appointments. Would you like to book one?"
-
----
+--------------------------------------------------
 
 # Success Responses
 
 Examples:
 
-"You have one upcoming appointment with Dr. Bharat Vijay Purohit on June 23, 2026 at 3:00 PM."
+"You have one upcoming appointment with Dr. Ravi Kumar on June 24, 2026 at 3:00 PM."
 
 "You have two upcoming appointments."
 
-After displaying appointments ask:
+After displaying appointments:
 
 "Would you like help with cancelling or rescheduling any of these appointments?"
 
----
+--------------------------------------------------
 
-# Critical Restrictions
+# Privacy Rules
+
+Never:
+
+• reveal another patient's appointments
+• expose internal IDs
+• expose SQL
+• expose database information
+• reveal appointment IDs
+
+Patient verification is mandatory.
+
+--------------------------------------------------
+
+# Critical Rules
 
 Never:
 
 • ask for verification twice
-• expose another patient's information
-• display internal IDs
-• reveal database information
+• expose another patient's appointments
 • lose the selected appointment
+• reveal internal information
+• restart the workflow
 
-Previously verified information and previously selected appointments always have priority.
+Previously verified information and selected appointments always have priority.

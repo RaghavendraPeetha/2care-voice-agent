@@ -5,7 +5,6 @@ from agent import agent
 
 router = APIRouter()
 
-# Store conversations by session
 conversation_store = {}
 
 
@@ -17,13 +16,11 @@ class ChatRequest(BaseModel):
 @router.post("/chat")
 def chat(data: ChatRequest):
 
-    # Create new conversation if session doesn't exist
     if data.session_id not in conversation_store:
         conversation_store[data.session_id] = []
 
     messages = conversation_store[data.session_id]
 
-    # Add user message
     messages.append(
         {
             "role": "user",
@@ -31,32 +28,63 @@ def chat(data: ChatRequest):
         }
     )
 
-    response = agent.invoke(
-        {
-            "messages": messages
+    try:
+
+        response = agent.invoke(
+            {
+                "messages": messages
+            },
+            config={
+                "thread_id": data.session_id
+            }
+        )
+
+        assistant_message = ""
+
+        if isinstance(response, dict):
+
+            msgs = response.get(
+                "messages",
+                []
+            )
+
+            for msg in reversed(msgs):
+
+                if hasattr(msg, "content"):
+
+                    if msg.content:
+
+                        assistant_message = str(
+                            msg.content
+                        )
+
+                        break
+
+        else:
+            assistant_message = str(response)
+
+        if not assistant_message:
+
+            assistant_message = (
+                "I couldn't complete that request right now."
+            )
+
+        messages.append(
+            {
+                "role": "assistant",
+                "content": assistant_message
+            }
+        )
+
+        return {
+            "response": assistant_message
         }
-    )
 
-    assistant_message = ""
+    except Exception as e:
 
-    if isinstance(response, dict):
+        print(e)
 
-        msgs = response.get("messages", [])
-
-        if msgs:
-            assistant_message = msgs[-1].content
-
-    else:
-        assistant_message = str(response)
-
-    # Save assistant response
-    messages.append(
-        {
-            "role": "assistant",
-            "content": assistant_message
+        return {
+            "response":
+            "I couldn't complete that request right now. Please try again."
         }
-    )
-
-    return {
-        "response": assistant_message
-    }
