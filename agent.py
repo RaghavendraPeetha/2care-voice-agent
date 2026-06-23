@@ -45,7 +45,7 @@ agent = create_deep_agent(
         Path("skills/reschedule.md").read_text(),
         Path("skills/doctor_lookup.md").read_text(),
         Path("skills/date_reasoning.md").read_text(),
-        Path("skills/escalation.md").read_text(),
+        Path("skills/emergency.md").read_text(),
         Path("skills/appointment_lookup.md").read_text()
     ],
 
