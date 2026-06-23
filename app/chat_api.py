@@ -5,6 +5,7 @@ from agent import agent
 
 router = APIRouter()
 
+# Conversation memory by session
 conversation_store = {}
 
 
@@ -16,11 +17,20 @@ class ChatRequest(BaseModel):
 @router.post("/chat")
 def chat(data: ChatRequest):
 
+    print("\n" + "=" * 60)
+    print("SESSION:", data.session_id)
+    print("USER MESSAGE:", data.message)
+    print("=" * 60)
+
+    # Create conversation if needed
     if data.session_id not in conversation_store:
         conversation_store[data.session_id] = []
 
+        print(f"NEW SESSION CREATED: {data.session_id}")
+
     messages = conversation_store[data.session_id]
 
+    # Add user message
     messages.append(
         {
             "role": "user",
@@ -28,63 +38,64 @@ def chat(data: ChatRequest):
         }
     )
 
+    print("\nCONVERSATION HISTORY:")
+    for m in messages:
+        print(m)
+
     try:
 
         response = agent.invoke(
             {
                 "messages": messages
-            },
-            config={
-                "thread_id": data.session_id
             }
         )
+
+        print("\nAGENT RESPONSE:")
+        print(response)
 
         assistant_message = ""
 
         if isinstance(response, dict):
 
-            msgs = response.get(
-                "messages",
-                []
-            )
+            msgs = response.get("messages", [])
 
-            for msg in reversed(msgs):
+            if msgs:
 
-                if hasattr(msg, "content"):
+                last_msg = msgs[-1]
 
-                    if msg.content:
+                if hasattr(last_msg, "content"):
+                    assistant_message = last_msg.content
+                else:
+                    assistant_message = str(last_msg)
 
-                        assistant_message = str(
-                            msg.content
-                        )
-
-                        break
+            else:
+                assistant_message = (
+                    "I couldn't understand the request."
+                )
 
         else:
             assistant_message = str(response)
 
-        if not assistant_message:
-
-            assistant_message = (
-                "I couldn't complete that request right now."
-            )
-
-        messages.append(
-            {
-                "role": "assistant",
-                "content": assistant_message
-            }
-        )
-
-        return {
-            "response": assistant_message
-        }
-
     except Exception as e:
 
-        print(e)
+        print("AGENT ERROR:", str(e))
 
-        return {
-            "response":
-            "I couldn't complete that request right now. Please try again."
+        assistant_message = (
+            "I couldn't complete that request right now."
+        )
+
+    # Save assistant response
+    messages.append(
+        {
+            "role": "assistant",
+            "content": assistant_message
         }
+    )
+
+    print("\nASSISTANT:")
+    print(assistant_message)
+    print("=" * 60 + "\n")
+
+    return {
+        "response": assistant_message
+    }
