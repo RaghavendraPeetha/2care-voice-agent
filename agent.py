@@ -1,8 +1,8 @@
 import os
 
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 from deepagents import create_deep_agent
-from langchain_groq import ChatGroq
 
 from pathlib import Path
 
@@ -24,11 +24,13 @@ from tools.appointment_tools import (
 
 load_dotenv()
 
-llm = ChatGroq(
-    model="meta-llama/llama-4-scout-17b-16e-instruct",
-    api_key=os.getenv("GROQ_API_KEY"),
+llm = ChatOpenAI(
+    model="openai/gpt-4o-mini",
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1",
     temperature=0
 )
+
 
 SYSTEM_PROMPT = Path("AGENTS.md").read_text()
 
