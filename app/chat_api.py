@@ -5,9 +5,11 @@ from agent import agent
 
 router = APIRouter()
 
-# Conversation memory by session
+# Conversation memory
 conversation_store = {}
 
+# Keep only recent messages
+MAX_MESSAGES = 10
 
 class ChatRequest(BaseModel):
     message: str
@@ -22,8 +24,9 @@ def chat(data: ChatRequest):
     print("USER MESSAGE:", data.message)
     print("=" * 60)
 
-    # Create conversation if needed
+    # Create new session
     if data.session_id not in conversation_store:
+
         conversation_store[data.session_id] = []
 
         print(f"NEW SESSION CREATED: {data.session_id}")
@@ -38,7 +41,11 @@ def chat(data: ChatRequest):
         }
     )
 
-    print("\nCONVERSATION HISTORY:")
+    # Keep only recent messages
+    messages = messages[-MAX_MESSAGES:]
+
+    print("\nRECENT CONVERSATION:")
+
     for m in messages:
         print(m)
 
@@ -59,16 +66,18 @@ def chat(data: ChatRequest):
 
             msgs = response.get("messages", [])
 
-            if msgs:
+            # Find last AI message
+            for msg in reversed(msgs):
 
-                last_msg = msgs[-1]
+                if hasattr(msg, "content"):
 
-                if hasattr(last_msg, "content"):
-                    assistant_message = last_msg.content
-                else:
-                    assistant_message = str(last_msg)
+                    content = msg.content
 
-            else:
+                    if content and str(content).strip():
+                        assistant_message = content
+                        break
+
+            if assistant_message == "":
                 assistant_message = (
                     "I couldn't understand the request."
                 )
@@ -92,8 +101,23 @@ def chat(data: ChatRequest):
         }
     )
 
+    # Again trim conversation
+    conversation_store[data.session_id] = (
+        messages[-MAX_MESSAGES:]
+    )
+
+    # Optional cleanup after successful booking
+    if (
+        "appointment has been successfully booked"
+        in assistant_message.lower()
+    ):
+        conversation_store[data.session_id] = []
+
+        print("SESSION CLEARED AFTER BOOKING")
+
     print("\nASSISTANT:")
     print(assistant_message)
+
     print("=" * 60 + "\n")
 
     return {
